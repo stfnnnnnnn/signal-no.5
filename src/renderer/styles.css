@@ -39,3 +39,4 @@ button.ghost { border-color: var(--muted); justify-content: center; }
 .toast-badge { border-color: var(--gold); } .toast-error { border-color: var(--danger); }
 @keyframes toast-in { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+.panel:focus { outline: none; }

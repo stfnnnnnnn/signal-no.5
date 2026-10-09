@@ -9,6 +9,7 @@ import { DiscoveryCard } from '../ui/DiscoveryCard';
 import { EventDialog } from '../ui/EventDialog';
 import { Toasts } from '../ui/Toasts';
 import { badgeToasts } from '../ui/badgeToasts';
+import { bindFocusPause } from '../state/focusPause';
 import { sliceHousehold, SLICE_SEED } from './sliceHousehold';
 
 export function App() {
@@ -17,6 +18,7 @@ export function App() {
   useEffect(() => store.onEvents((events) => {
     for (const t of badgeToasts(events, store.engine.getBadgeCatalog())) ui.toast(t);
   }), []);
+  useEffect(() => bindFocusPause(window), []);
   if (!ready) return <div className="boot">Could not start the game.</div>;
   return (<>
     <PhaserGame />

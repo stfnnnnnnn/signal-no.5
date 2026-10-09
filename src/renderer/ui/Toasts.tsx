@@ -1,13 +1,8 @@
-import { useEffect } from 'react';
 import { ICON_URLS } from '../game/assets';
 import { useUi } from '../state/hooks';
 
 export function Toasts() {
   const ui = useUi();
-  useEffect(() => {
-    const timers = ui.toasts.map((t) => setTimeout(() => ui.dismiss(t.id), t.kind === 'badge' ? 6000 : 3500));
-    return () => timers.forEach(clearTimeout);
-  }, [ui, ui.toasts]);
   return (
     <div className="toasts" aria-live="polite">
       {ui.toasts.map((t) => (

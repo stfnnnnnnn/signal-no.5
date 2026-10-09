@@ -88,8 +88,8 @@ export class House extends Phaser.Scene {
     return nearestAnchor(c.x, c.y, this.anchorPoints);
   }
 
-  private tryInteract() {
-    if (ui.isBlocking()) return;
+  private tryInteract(event?: KeyboardEvent) {
+    if (event?.repeat || ui.isBlocking()) return; // a held key must not re-fire interactions
     const id = this.nearest();
     if (id) interactWith(id, this.labels.get(id) ?? id);
   }
