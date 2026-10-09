@@ -8,6 +8,8 @@ export interface GuardContext {
   allowedItems: ReadonlySet<ItemId>;
   /** Whether the text may mention an evacuation destination (only at arrival). */
   placesAllowed: boolean;
+  /** The configured home; when given, text that describes a different dwelling is rejected. */
+  home?: HomeFacts;
 }
 
 const ALWAYS_FORBIDDEN: [RegExp, string][] = [
@@ -38,11 +40,51 @@ export function checkGrounding(text: string, g: GuardContext): string | null {
   if (!g.placesAllowed && PLACES.test(text)) return 'invented-place';
   if (g.livesAlone && FAMILY.test(text)) return 'invented-household-member';
   for (const [re, item] of ITEM_WORDS) if (re.test(text) && !g.allowedItems.has(item)) return `unavailable-item:${item}`;
-  return null;
+  return g.home ? checkHousing(text, g.home) : null;
 }
 
 /** Simpler guard for debrief narration (no inventory context). */
-export function checkNarration(text: string): string | null {
+export function checkNarration(text: string, home?: HomeFacts): string | null {
   for (const [re, why] of ALWAYS_FORBIDDEN) if (why !== 'invented-resource' && re.test(text)) return why;
+  return home ? checkHousing(text, home) : null;
+}
+
+// ---------- housing ----------
+/** The player's home as configured: legacy survey type (onboarding v2 always 'detached') + floors (1, 2, 3 = three or more). */
+export interface HomeFacts { type: string; floors: number }
+
+/** Plain words for the configured home, given to the model and used in reviewed text. */
+export function describeHome(h: HomeFacts): string {
+  if (h.type === 'townhouse' || h.type === 'apartment' || h.type === 'condominium') return h.type;
+  return h.floors <= 1 ? 'single-story house' : h.floors === 2 ? 'two-story house' : 'multi-story house';
+}
+
+const DWELLINGS: [RegExp, string][] = [
+  [/\bapartments?\b/gi, 'apartment'], [/\bcondo(minium)?s?\b/gi, 'condominium'], [/\btown ?houses?\b/gi, 'townhouse'],
+];
+const ONE_FLOOR = /\b(single|one)[- ]?(stor(e)?y|level|floor)\b|\bbungalows?\b/gi;
+const TWO_FLOORS = /\btwo[- ]?(stor(e)?y|level|floor)\b/gi;
+const UPPER_FLOOR = /\bupstairs\b|\b(second|upper) floors?\b/gi;
+const MULTI_FLOORS = /\b(three|multi|multiple)[- ]?(stor(e)?y|level|floor)s?\b|\bthird floor\b/gi;
+/** A mention preceded by these words is about somewhere else ("a neighbour in the apartment block nearby"). */
+const ELSEWHERE = /\b(neighbou?rs?'?s?|next door|nearby|across|other|another|someone|their)\b[^.!?]{0,30}$/i;
+const nearbyAfter = (text: string, end: number) => /^[^.!?]{0,25}\b(nearby|next door|across the (street|road))\b/i.test(text.slice(end));
+
+function aboutThisHome(text: string, m: RegExpExecArray): boolean {
+  return !ELSEWHERE.test(text.slice(Math.max(0, m.index - 40), m.index)) && !nearbyAfter(text, m.index + m[0].length);
+}
+function firstHomeMention(text: string, re: RegExp): boolean {
+  for (const m of text.matchAll(re)) if (aboutThisHome(text, m as RegExpExecArray)) return true;
+  return false;
+}
+
+/**
+ * Deterministic housing check: rejects text that calls the player's home a different kind of dwelling or gives it a
+ * different number of floors. Mentions clearly about somewhere else (a neighbour's apartment block) are allowed.
+ */
+export function checkHousing(text: string, h: HomeFacts): string | null {
+  for (const [re, kind] of DWELLINGS) if (kind !== h.type && firstHomeMention(text, re)) return `housing:${kind}`;
+  const wrongFloors = h.floors <= 1 ? [TWO_FLOORS, UPPER_FLOOR, MULTI_FLOORS] : h.floors === 2 ? [ONE_FLOOR, MULTI_FLOORS] : [ONE_FLOOR, TWO_FLOORS];
+  for (const re of wrongFloors) if (firstHomeMention(text, re)) return 'housing:floors';
   return null;
 }

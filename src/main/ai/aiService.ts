@@ -82,7 +82,7 @@ export class AIService {
       if (this.o.endpoint()) {
         try {
           const raw = await this.chat(buildDebriefMessages(req), debriefJsonSchema(ev), 160);
-          const v = validateDebriefNarration(ev, raw);
+          const v = validateDebriefNarration(ev, raw, req.home);
           if (v.ok) return { ...v.narration, source: 'ai' as const, fallbackReason: null };
           reason = v.reason;
         } catch (e) { reason = e instanceof Error ? e.message : String(e); }

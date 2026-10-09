@@ -5,7 +5,7 @@ import { DebriefNarration, type DebriefEvaluation } from '../../shared/contracts
 import type { GameState } from '../../shared/contracts/state';
 import { BADGE_META } from '../content/badges';
 import { FINDING_BY_ID } from '../content/findings';
-import { checkNarration } from './guard';
+import { checkNarration, describeHome, type HomeFacts } from './guard';
 
 const ENDING_LABEL = { handa: 'Handa', nakaraos: 'Nakaraos', nahirapan: 'Nahirapan' } as const;
 
@@ -16,6 +16,7 @@ export function buildDebriefRequest(ev: DebriefEvaluation, s: GameState): Debrie
     gaps: ev.gaps.map((id) => ({ id, text: FINDING_BY_ID.get(id)!.lesson })),
     badges: ev.badgeIds.map((id) => BADGE_META.get(id)!.name),
     householdSize: s.household.size,
+    home: { type: s.household.housing.type, floors: s.household.housing.floors, description: describeHome(s.household.housing) },
   };
 }
 
@@ -33,14 +34,14 @@ export function debriefJsonSchema(ev: DebriefEvaluation): unknown {
 
 export type NarrationResult = { ok: true; narration: DebriefNarration } | { ok: false; reason: string };
 
-export function validateDebriefNarration(ev: DebriefEvaluation, raw: string): NarrationResult {
+export function validateDebriefNarration(ev: DebriefEvaluation, raw: string, home?: HomeFacts): NarrationResult {
   let obj: unknown;
   try { obj = JSON.parse(raw); } catch { return { ok: false, reason: 'invalid-json' }; }
   const parsed = DebriefNarration.safeParse(obj);
   if (!parsed.success) return { ok: false, reason: 'schema' };
   const known = new Set([...ev.strengths, ...ev.gaps]);
   if (parsed.data.highlightFindingIds.some((id) => !known.has(id))) return { ok: false, reason: 'unknown-finding' };
-  const why = checkNarration(parsed.data.summary);
+  const why = checkNarration(parsed.data.summary, home);
   if (why) return { ok: false, reason: `ungrounded:${why}` };
   return { ok: true, narration: parsed.data };
 }

@@ -10,6 +10,7 @@ const SCENARIO_SYSTEM = [
   '- Use only the facts, household members and items given. Mention no other people, places, items, organisations or services.',
   '- Never state forecasts, warning levels, advisory contents, evacuation destinations, phone numbers, websites, medical instructions or safety guarantees.',
   '- Do not tell the player what to do; the choices are shown separately.',
+  '- The home of the player is exactly household.homeDescription. Call it that, or simply "home" or "house". Never call it an apartment, condominium or townhouse unless that is the homeDescription, and never give it a different number of floors.',
   '- Calm, empathetic, plain English. Dialogue at most 170 characters; description at most 140 characters, one sentence.',
   'Reply with JSON only: {"schemaVersion":1,"eventId","variantId" (copy it),"speaker" (one of allowedSpeakers),"dialogue","description","actionIds" (copy allowedActionIds exactly, same order)}.',
 ].join('\n');
@@ -24,6 +25,7 @@ export function buildPromptMessages(req: ScenarioAIRequest): ChatMessage[] {
 const DEBRIEF_SYSTEM = [
   'You summarise a finished run of an educational typhoon-preparedness game for the player, warmly and briefly.',
   'Use only the strengths and gaps given; do not add advice, numbers, places, phone numbers, websites or medical instructions.',
+  'If you mention the home, use only home.description (or simply "home").',
   'Reply with JSON only: {"summary": at most 300 characters, "highlightFindingIds": up to 3 ids taken from the given strengths or gaps}.',
 ].join('\n');
 

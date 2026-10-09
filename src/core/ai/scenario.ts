@@ -8,7 +8,7 @@ import { ACTION_BY_ID } from '../content/actions';
 import { EVENT_BY_ID } from '../content/events';
 import { ITEM_LABELS } from '../content/items';
 import * as sel from '../selectors';
-import { checkGrounding } from './guard';
+import { checkGrounding, describeHome } from './guard';
 
 export const DIALOGUE_MAX = 200;
 export const DESCRIPTION_MAX = 160;
@@ -33,7 +33,7 @@ export function buildScenarioRequest(s: GameState): ScenarioAIRequest | null {
       size: p.size, livesAlone: p.size === 1,
       visibleMembers: p.members.filter((m) => m.visibleNpc && m.npcId).map((m) => ({ npcId: m.npcId!, role: ROLE[m.ageGroup] })),
       hasDependents: p.members.some((m) => m.dependent), assistanceNeeded: sel.assistanceNeeded(p), pets: p.pets.types,
-      homeType: p.housing.type, floors: p.housing.floors, theme: p.theme,
+      homeType: p.housing.type, floors: p.housing.floors, homeDescription: describeHome(p.housing), theme: p.theme,
     },
     state: {
       hoursToLandfall: Math.round(sel.minutesToLandfall(s) / sel.HOUR), weather: s.environment.weatherState,
@@ -102,7 +102,10 @@ export function validateScenarioResponse(req: ScenarioAIRequest, raw: string): V
   if (r.actionIds.join('|') !== req.allowedActionIds.join('|')) return { ok: false, reason: 'actions-altered', detail: r.actionIds.join(',') };
   const allowedItems = new Set<ItemId>(req.state.availableItems.map((l) => LABEL_TO_ITEM.get(l)).filter((x): x is ItemId => !!x));
   for (const a of req.allowedActionIds) for (const it of ACTION_ITEMS[a] ?? []) allowedItems.add(it);
-  const why = checkGrounding(`${r.dialogue} ${r.description}`, { livesAlone: req.household.livesAlone, allowedItems, placesAllowed: req.eventId === 'EV11' });
+  const why = checkGrounding(`${r.dialogue} ${r.description}`, {
+    livesAlone: req.household.livesAlone, allowedItems, placesAllowed: req.eventId === 'EV11',
+    home: { type: req.household.homeType, floors: req.household.floors },
+  });
   if (why) return { ok: false, reason: 'ungrounded', detail: why };
   const content = ScenarioAIResponse.parse(r);
   return { ok: true, content: { ...content, source: 'ai', fallbackReason: null } };
