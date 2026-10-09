@@ -137,3 +137,49 @@ button.hud-btn { width: auto; padding: 1px 8px; font-size: .85rem; border-width:
 .shop-list .price s { color: var(--muted); font-size: .8rem; }
 .shop-list .stock { color: var(--muted); font-size: .85rem; }
 .toasts { top: 76px; }
+
+/* ---------- achievements (M8) ---------- */
+.progress-screen { max-height: calc(100vh - 48px); overflow: auto; }
+.achievements { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+.achievements li { display: flex; gap: 10px; align-items: flex-start; border: 2px solid var(--panel-2); padding: 8px; }
+.achievements li img, .badge-grid img { image-rendering: pixelated; flex: none; }
+.achievements li:not(.unlocked) img, .badge-grid li:not(.earned) img { filter: grayscale(1) brightness(.55); }
+.achievements li.unlocked { border-color: var(--gold); }
+.achievements strong { color: var(--ink); }
+.achievements p { margin: 2px 0; color: var(--muted); font-size: .9rem; }
+.achievements .when { color: var(--sky); font-size: .85rem; }
+.achievements progress { width: 140px; height: 10px; }
+.badge-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.badge-grid li { display: grid; justify-items: center; gap: 4px; text-align: center; font-size: .85rem; color: var(--muted); border: 2px solid var(--panel-2); padding: 6px; }
+.badge-grid li.earned { color: var(--ink); border-color: var(--gold); }
+
+/* ---------- debrief and plan (M9) ---------- */
+.debrief, .guide { max-height: calc(100vh - 48px); overflow: auto; }
+.debrief-top { display: grid; grid-template-columns: 1fr 1.6fr; gap: 12px; }
+@media (max-width: 720px) { .debrief-top { grid-template-columns: 1fr; } }
+.score-card { border: 2px solid var(--sky); padding: 10px; display: grid; gap: 4px; align-content: start; }
+.score-card .score { font-size: 2.6rem; color: var(--ink); line-height: 1; }
+.score-card .score small { font-size: 1rem; color: var(--muted); }
+.score-card strong { color: var(--gold); font-size: 1.15rem; }
+.score-card p { margin: 0; color: var(--muted); }
+.handa-card { border: 2px solid var(--panel-2); padding: 10px; display: flex; gap: 10px; }
+.handa-card.earned { border-color: var(--gold); }
+.handa-card img { image-rendering: pixelated; flex: none; }
+.handa-card:not(.earned) img { filter: grayscale(1) brightness(.6); }
+.handa-card p { margin: 4px 0; }
+.handa-list { list-style: none; margin: 0; padding: 0; font-size: .9rem; display: grid; gap: 2px; }
+.handa-list .notMet { color: var(--warn); } .handa-list .notApplicable { color: var(--muted); }
+.narration { border-left: 3px solid var(--sky); padding: 4px 10px; }
+.narration p { margin: 4px 0; }
+.categories { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.categories li { display: grid; grid-template-columns: 14rem 1fr 3rem; align-items: center; gap: 8px; }
+.categories meter { width: 100%; height: 10px; }
+.lessons { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; }
+.lessons.gaps li::marker { color: var(--warn); }
+.debrief-badges small { color: var(--muted); font-size: .75rem; }
+.debrief-badges .tone-good small { color: var(--ok); }
+.timeline summary { cursor: pointer; color: var(--sky); }
+.timeline ol { margin: 6px 0; padding-left: 1.2rem; font-size: .9rem; max-height: 14rem; overflow: auto; }
+.timeline span { color: var(--muted); }
+.checklist.plan li { color: var(--ink); }
+@media print { .row-actions, .hud, .toasts { display: none; } .panel { border: none; box-shadow: none; } body { background: #fff; color: #000; } }
