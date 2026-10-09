@@ -155,17 +155,9 @@ On interact, call `engine.interact(id)`. Then either open the event dialog or sh
   - Customization: theme, player, appearance, and a "minimum budget challenge" toggle.
   - The game takes over from here: it assesses preparedness through interactions, not more questions.
 
-## 13-legacy. Survey UI (HF, deprecated)
+## 13-legacy. Survey UI (removed)
 
-- **MVP:**
-  - All 26 questions with the HF wording and options, and "Prefer not to say" where HF provides it.
-  - Conditional fields: Q4 count, Q5 animals, Q13 only if Q12 = yes, Q15 categories only if Q15 = yes, Q25 colour only for custom.
-  - A live total check for the Q2 age grid against the Q1 range.
-  - Show backend `issues` next to fields.
-  - A "Generate a fictional household" path (Q3).
-  - The privacy notice (HF intro).
-  - A review screen before starting.
-- Section III (medical) must stay optional and must never ask for diagnoses or medication names.
+The 26-question survey UI is no longer built. The backend still accepts the legacy survey input for old fixtures only (see [SURVEY_TO_GAMESTATE_MAPPING.md](../implementation/SURVEY_TO_GAMESTATE_MAPPING.md)). Build onboarding per §13.
 
 ## 14. Accessibility and mood (project_context §8)
 

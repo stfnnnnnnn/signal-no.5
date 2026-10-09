@@ -51,7 +51,7 @@ If the backend lacks something you need, raise it. Don't work around it in the U
 ```powershell
 npm install
 npm run dev        # Electron + Vite (hot reload) at http://localhost:5173 inside the app window
-npm test           # backend tests must stay green (322)
+npm test           # backend tests must stay green (329)
 npm run typecheck
 ```
 
@@ -59,7 +59,7 @@ No GPU or model is needed: AI status becomes `unavailable` and dialogue uses rev
 
 ## Next
 
-1. **[FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md):** the canonical, task-by-task implementation guide (architecture, mappings, assets, verified examples, plan). **[FRONTEND_HANDOFF.md](FRONTEND_HANDOFF.md)** is the one-page two-developer split.
+1. **[FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md):** the canonical, task-by-task implementation guide (architecture, mappings, assets, verified examples, plan). **[FRONTEND_HANDOFF.md](FRONTEND_HANDOFF.md)** is the one-page summary (one frontend workstream).
 1. **[FRONTEND_GETTING_STARTED.md](FRONTEND_GETTING_STARTED.md):** setup, what to build, first milestone, common mistakes.
 2. **[FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md):** every call, with types, examples and errors.
 3. **[UI_GAMEPLAY_REQUIREMENTS.md](UI_GAMEPLAY_REQUIREMENTS.md):** scenes, sprites, HUD and gameplay UI requirements (MVP vs optional).

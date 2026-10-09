@@ -10,7 +10,7 @@ git clone <repository-url> "signal no.5"
 cd "signal no.5"
 npm install
 node node_modules/electron/install.js   # only if node_modules\electron\dist\electron.exe is missing (npm 11)
-npm test              # expect 322 passed
+npm test              # expect 329 passed
 npm run dev           # opens the Electron window with the backend dev harness
 ```
 
@@ -81,7 +81,7 @@ You'll need to add React, Phaser and a Vite React plugin, and register the plugi
 
 Done when this works with both `randomHousehold()` and `customFamily()`, in fallback mode.
 
-The full, task-by-task plan is [FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md); the two-developer split is [FRONTEND_HANDOFF.md](FRONTEND_HANDOFF.md).
+The full, task-by-task plan is [FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md); the one-page summary is [FRONTEND_HANDOFF.md](FRONTEND_HANDOFF.md).
 
 ## 7. Common mistakes
 

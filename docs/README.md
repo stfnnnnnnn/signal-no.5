@@ -68,7 +68,7 @@ When two documents disagree:
 | [frontend/README.md](frontend/README.md) | **Start here (frontend):** what's done, what to build, ownership | Frontend | Guide |
 | [frontend/FRONTEND_GETTING_STARTED.md](frontend/FRONTEND_GETTING_STARTED.md) | Setup, mock data, first milestone, common mistakes | Frontend | Guide |
 | [frontend/FRONTEND_IMPLEMENTATION_BLUEPRINT.md](frontend/FRONTEND_IMPLEMENTATION_BLUEPRINT.md) | **Canonical frontend build guide**: architecture, screens, world, exact ID mappings, asset manifest, verified examples, two-track task plan, gaps | Frontend | Guide |
-| [frontend/FRONTEND_HANDOFF.md](frontend/FRONTEND_HANDOFF.md) | One-page task split for Frontend Dev 1 (world) and Dev 2 (UI) | Frontend | Handoff |
+| [frontend/FRONTEND_HANDOFF.md](frontend/FRONTEND_HANDOFF.md) | One-page summary of the single frontend workstream (milestones M1–M10, vertical slice) | Frontend | Handoff |
 | [implementation/CONTENT_REVIEW.md](implementation/CONTENT_REVIEW.md) | Educational content needing validation against official PH guidance; proposed (unapplied) changes | Content reviewers, backend | Review |
 | [frontend/FRONTEND_BACKEND_INTEGRATION.md](frontend/FRONTEND_BACKEND_INTEGRATION.md) | Every API call, with types, examples, errors and gaps | Frontend | Ref |
 | [frontend/UI_GAMEPLAY_REQUIREMENTS.md](frontend/UI_GAMEPLAY_REQUIREMENTS.md) | Scenes, sprites, HUD, overlays (MVP vs optional) | Frontend | Spec digest |
@@ -83,7 +83,7 @@ When two documents disagree:
 | `tests/docs-examples.test.ts`, `tests/docs-sync.test.ts` | Executable blueprint §6 examples (incl. 6.5 Bayanihan); frontend docs stay free of the removed NPC |
 | `tests/community.test.ts`, `tests/evacuation-timing.test.ts` | B06/A08 community assistance, migrations, removal; evacuation travel and location consistency |
 
-Run with `npm test` (322 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
+Run with `npm test` (329 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
 
 ## 11. Packaging
 | Document | Description | Audience | Type |

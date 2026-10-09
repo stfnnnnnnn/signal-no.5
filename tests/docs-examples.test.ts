@@ -10,8 +10,13 @@ import { buildDebriefRequest, fallbackDebriefNarration } from '../src/core/ai/de
 import { buildSceneAIRequest, mergeSceneSuggestion } from '../src/core/scene/directive';
 import { missingGoBagItems, waterRequirement } from '../src/core/selectors';
 import { ONBOARDING_QUESTIONS, type CustomOnboarding, type RandomOnboarding } from '../src/shared/contracts/onboarding';
+import { customSolo } from './fixtures/onboarding';
 import { SaveStore } from '../src/main/persistence/saveStore';
 import { playDiligently } from './diligent';
+import { advanceTo } from './helpers';
+import { loadGame } from '../src/core/engine';
+import { AIService } from '../src/main/ai/aiService';
+import * as sel from '../src/core/selectors';
 
 const DUMP = process.env.SIGNAL_DOC_DUMP; // set to a folder to write example payloads for the docs
 
@@ -130,5 +135,113 @@ describe('blueprint §6 examples', () => {
     const store = new SaveStore(mkdtempSync(join(tmpdir(), 'doc65-')));   // main-process side of achievements.recordRun
     const { achievements } = await store.recordCompletedRun(final);
     expect(achievements.find((a) => a.id === 'A08')).toMatchObject({ progress: 1, target: 5, unlocked: false });
+  });
+  it('6.6 random onboarding → preview → deterministic re-roll → init', () => {
+    const r3 = ONBOARDING_QUESTIONS.find((q) => q.id === 'R3')!;
+    expect(r3.visibleWhen).toBe('r1SizeRange != 1');                 // hide R3 for one-person households
+    const answers: RandomOnboarding = { schemaVersion: 1, mode: 'random', r1SizeRange: '3-4', r2PlayerAge: 'age36to59', r3OtherAgeGroups: ['surprise'] }; // R4 skipped → 'surprise'
+    const a = createGame(answers, { seed: 101 });
+    const b = createGame(answers, { seed: 101 });
+    const c = createGame(answers, { seed: 102 });
+    if (!a.ok || !b.ok || !c.ok) throw new Error('setup');
+    expect(a.engine.getProfile()).toEqual(b.engine.getProfile());     // same answers + seed → same household (preview is stable)
+    expect(a.engine.getProfile().configMode).toBe('random');
+    expect(a.engine.getProfile().scenarioPreference).toBe('surprise');
+    expect(c.engine.getProfile().members.length).toBeGreaterThanOrEqual(3); // "re-roll" = same answers, new seed
+    const bad = createGame({ ...answers, r1SizeRange: '1' }, { seed: 1 });
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.error.issues!.map((i) => i.message)).toContain('skip for a one-person household');
+  });
+
+  it('6.7 interaction (after the player walks to the sink) → action → state refresh', () => {
+    const r = createGame(customSolo(), { seed: 5 });
+    if (!r.ok) throw new Error('setup');
+    const engine = r.engine;
+    engine.resolveEvent('CHECK_ADVISORY');
+    const before = engine.getState();
+    const menu = engine.interact('KITCHEN_SINK');
+    if (!menu.ok) throw new Error(menu.error.message);
+    expect(menu.actions.map((a) => a.actionId)).toEqual(['FILL_CONTAINERS', 'INSPECT_SUPPLIES']);
+    const res = engine.executeAction('FILL_CONTAINERS');
+    if (!res.ok) throw new Error(res.error.message);
+    expect((res.state.house.WATER ?? 0) - (before.house.WATER ?? 0)).toBe(15);
+    expect(res.state.clock.gameMinutes - before.clock.gameMinutes).toBe(30);
+    const busy = createGame(customSolo(), { seed: 5 });             // EV01 still open → interaction refused
+    if (busy.ok) { const x = busy.engine.interact('KITCHEN_SINK'); expect(x.ok ? null : x.error.code).toBe('EVENT_PENDING'); }
+  });
+
+  it('6.8 typhoon event → player decision → consequence (evacuation advisory)', () => {
+    const r = createGame(customSolo(), { seed: 5 });                 // seed 5: advisory at h40, landfall h48
+    if (!r.ok) throw new Error('setup');
+    const engine = r.engine;
+    advanceTo(engine, 40 * 60 - 1);
+    engine.setSpeed(1);
+    let ev = engine.getState().activeEvent;
+    for (let i = 0; i < 50 && ev?.eventId !== 'EV08'; i++) { const t = engine.tick(60_000); if (t.ok) ev = t.state.activeEvent; }
+    expect(ev?.eventId).toBe('EV08');
+    const choices = engine.getEventChoices();
+    expect(choices.map((c) => c.actionId)).toContain('FOLLOW_EVACUATION');
+    const res = engine.resolveEvent('FOLLOW_EVACUATION');
+    if (!res.ok) throw new Error(res.error.message);
+    expect(res.events).toContainEqual({ type: 'phaseChanged', from: expect.any(String), to: 'evacuation' });
+    expect(res.events).toContainEqual({ type: 'sceneChanged', from: 'HOUSE', to: 'STREET' });
+    expect(sel.householdLocation(res.state)).toBe('inTransit');
+    expect(engine.getSceneDirective().transition).toBe('rainWipe');
+  });
+
+  it('6.9 wellbeing change → HUD (stayed home after the advisory, severe flood)', () => {
+    const both: CustomOnboarding = { ...customSolo(), q6Surroundings: ['waterway', 'floodProne'] }; // exposure 'both' → severe peak
+    const r = createGame(both, { seed: 5 });
+    if (!r.ok) throw new Error('setup');
+    const engine = r.engine;
+    const L = engine.getState().landfallMinute;
+    advanceTo(engine, L + 3 * 60, ['CHECK_ADVISORY', 'DELAY_EVACUATION', 'REVIEW_ADVISORY', 'MOVE_TO_SAFER_ROOM', 'DEFER']);
+    const st = engine.getState();
+    expect(st.player.wellbeing).toEqual({ current: 85, max: 100 });
+    expect(st.player.wellbeingEvents[0]).toMatchObject({ ruleId: 'W_ADVISORY_IGNORED_SEVERE_FLOOD', delta: -15 });
+  });
+
+  it('6.10 end-of-run badge notification and lifetime persistence across a restart', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'doc610-'));
+    const r = createGame(customSolo(), { seed: 2 });
+    if (!r.ok) throw new Error('setup');
+    const final = playDiligently(r.engine);
+    const ev = r.engine.evaluate();
+    const lifetimeBefore = await new SaveStore(dir).readBadges();     // window.signal.badges.read()
+    await new SaveStore(dir).recordCompletedRun(final);               // achievements.recordRun also merges earned badges
+    const lifetimeAfter = await new SaveStore(dir).readBadges();      // new instance = app restart
+    const firstTime = ev.badgeIds.filter((id) => !lifetimeBefore.includes(id));
+    expect(firstTime.length).toBeGreaterThan(0);
+    expect(lifetimeAfter).toEqual(expect.arrayContaining(ev.badgeIds));
+  });
+
+  it('6.11 save → load → resume', async () => {
+    const store = new SaveStore(mkdtempSync(join(tmpdir(), 'doc611-')));
+    const r = createGame(customSolo(), { seed: 5 });
+    if (!r.ok) throw new Error('setup');
+    r.engine.resolveEvent('CHECK_ADVISORY');
+    r.engine.executeAction('FILL_CONTAINERS');
+    await store.writeGame('slot-1', r.engine.getState());            // window.signal.save.write('slot-1', state)
+    expect(await store.listGames()).toEqual(['slot-1']);
+    const loaded = loadGame(await store.readGame('slot-1'));          // window.signal.save.read → loadGame
+    if (!loaded.ok) throw new Error('load');
+    expect(loaded.engine.getState()).toEqual(r.engine.getState());
+    const t = loaded.engine.tick(60_000);                             // resume: 60 s real at 1× = 15 game minutes
+    expect(t.ok && t.state.clock.gameMinutes).toBe(r.engine.getState().clock.gameMinutes + 15);
+    expect(loadGame({ nope: true }).ok).toBe(false);                  // INVALID_SAVE
+  });
+
+  it('6.12 AI unavailable or timed out → deterministic fallback, never blocking', async () => {
+    const r = createGame(customSolo(), { seed: 5 });
+    if (!r.ok) throw new Error('setup');
+    const st = r.engine.getState();
+    const ai = new AIService({ endpoint: () => null, timeoutMs: 200, retries: 0 });   // model not running
+    const content = await ai.generateScenario(buildScenarioRequest(st)!, st.runId);
+    expect(content).toMatchObject({ source: 'fallback', fallbackReason: 'model-unavailable', actionIds: st.activeEvent!.actionIds });
+    expect(await ai.suggestScene(buildSceneAIRequest(st), st.runId)).toBeNull();
+    const ev = r.engine.evaluate();
+    const narration = await ai.narrateDebrief(ev, buildDebriefRequest(ev, st));
+    expect(narration.source).toBe('fallback');
+    // Timeout path: tests/main/aiService.test.ts "falls back on timeout without waiting for the slow model".
   });
 });

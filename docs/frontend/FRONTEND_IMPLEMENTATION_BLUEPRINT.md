@@ -5,7 +5,7 @@
 **How to use it:**
 1. Read §1 (what exists).
 2. Read §2 (architecture).
-3. Pick your track in §10 and work through the tasks in order. Each task lists its files, contracts, assets, steps and definition of done.
+3. Work through the milestones in §10 in order (one frontend workstream). Each task lists its files, contracts, assets, steps and definition of done.
 4. Use §3–§5 as reference while implementing.
 
 The API details live in [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md) (every call, type and error). The scene contract and asset IDs are in [FRONTEND_BACKEND_CONTRACTS.md](../implementation/FRONTEND_BACKEND_CONTRACTS.md). This blueprint links to them and doesn't copy them.
@@ -27,7 +27,7 @@ The API details live in [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEG
 | Renderer entry | **Backend dev harness only** | `src/renderer/index.html` + `src/renderer/harness.ts` (buttons and JSON; uses the deprecated legacy survey). It's a reference, to be replaced |
 | Renderer build | **Exists** | `electron.vite.config.ts` `renderer` block (root `src/renderer`, input `index.html`). Vite 7.3.7 |
 | Remote (`origin/main`) | Only the two initial commits | `git fetch` on 2026-10-09: no frontend branch exists |
-| Backend engine, contracts, AI, persistence, packaging | **Complete and tested** (322 tests) | `npm test`. See [IMPLEMENTATION_PLAN.md](../implementation/IMPLEMENTATION_PLAN.md) |
+| Backend engine, contracts, AI, persistence, packaging | **Complete and tested** (329 tests) | `npm test`. See [IMPLEMENTATION_PLAN.md](../implementation/IMPLEMENTATION_PLAN.md) |
 | Electron shell, preload bridge, CSP, model server | **Complete** | `src/main/*`, `src/preload/index.ts`, `src/shared/bridge.ts` |
 
 **What the frontend gets on day one:**
@@ -568,6 +568,18 @@ achievements.find((a) => a.id === 'A08');                        // { progress: 
 ```
 Verified in `tests/docs-examples.test.ts` (6.5).
 
+### More verified flows (same test file)
+
+| Flow | Test |
+|---|---|
+| Random onboarding → preview → deterministic re-roll (same answers + seed = same household; R3 skipped for 1 person) | 6.6 |
+| Interaction after movement: `interact('KITCHEN_SINK')` → `FILL_CONTAINERS` (+15 L, +30 min); `EVENT_PENDING` while an event is open | 6.7 |
+| EV08 → `resolveEvent('FOLLOW_EVACUATION')` → `phaseChanged` evacuation, `sceneChanged` HOUSE→STREET, location `inTransit`, transition `rainWipe` | 6.8 |
+| Wellbeing → HUD: stayed home with a severe flood → `{ current: 85, max: 100 }` + `W_ADVISORY_IGNORED_SEVERE_FLOOD` | 6.9 |
+| End-of-run new badges (`ev.badgeIds` minus `badges.read()`), persistence across a restart | 6.10 |
+| Save → load → resume (`save.write` → `save.read` → `loadGame` → `tick`) | 6.11 |
+| AI unavailable → fallback text, `suggestScene` null, fallback narration (timeout: `tests/main/aiService.test.ts`) | 6.12 |
+
 ## 7. State synchronisation, de-duplication and audio
 
 | Concern | Rule |
@@ -616,31 +628,51 @@ Verified in `tests/docs-examples.test.ts` (6.5).
 | Icons | Badges `badge_b01_handa` … `badge_b12_powered_up` (12; IDs in §5). Achievements `achievement_a01_first_storm` … `achievement_a10_plan_in_hand` (10). Items: one per `ItemId` (19). HUD: clock, speed, cash, phone, go-bag, wellbeing, warning, power, water | |
 | UI | Pixel font (+ fallback), 9-slice panel, buttons, dialog box, toast, progress bar | High contrast; large targets |
 
-## 10. Implementation plan (dependency-ordered, two parallel tracks)
+## 10. Implementation plan (one frontend workstream, dependency-ordered)
 
-**Shared files, owned jointly (coordinate before changing):** `src/renderer/state/engineStore.ts`, `src/renderer/app/App.tsx`, `src/renderer/game/PhaserGame.tsx`, the `renderer` block of `electron.vite.config.ts`, and `package.json` (dependencies).
+One developer, or one Claude Code instance, owns the whole frontend: React UI, Phaser world, assets and integration. Under the frontend's control: `src/renderer/**`, `package.json` dependencies and the `renderer` block of `electron.vite.config.ts`. Everything else is backend-owned.
 
-**Integration checkpoints:**
-- **C1** (after F1): the store drives the old harness flow headlessly.
-- **C2** (after A3 + B5): the first playable loop. Onboarding → house → interact → action → state update → dialog.
-- **C3** (after A6 + B8): a full run to the debrief with badges and achievements.
-- **C4** (after both tracks): the packaged `SignalNo5.exe` playthrough offline.
+**First playable vertical slice (end of M4):** initialise a hard-coded household → enter the house → move → interact with the phone → `CHECK_BULLETIN` → `SHARE_VERIFIED_ADVISORY` → Bayanihan toast from `badgeEarned`. It needs no onboarding screens and no art (placeholder textures); see §6.5 for the exact calls.
 
-### Foundation (both developers, first)
+| Milestone | Tasks (details below) | Depends on | Checkpoint |
+|---|---|---|---|
+| **M1** Foundation and shared state | F0, F1 | — | Store drives `createGame → resolveEvent → executeAction` headlessly; production-CSP asset load proven |
+| **M2** House map, movement, collisions | A1, A2, A3 (movement part) | M1 | Player walks the fixed house in both themes |
+| **M3** Object interactions and backend actions | A3 (interaction part), B5 (InteractionMenu, DiscoveryCard), badge toast from B9 | M2 | Phone → bulletin → share → one Bayanihan toast |
+| **M4** Event dialogue and branching | B5 (EventDialog) | M3 | EV01 dialog with fallback/AI text; choices resolve. **Vertical slice complete** |
+| **M5** Custom/random onboarding and customization | B1, B2, B3 | M1 (can follow M4) | Both paths start a real household |
+| **M6** SceneDirective rendering and scenes | A4, A5, A6 | M2, M4 | Weather/flood/lighting/props/cues/audio follow the directive; late departures stay on STREET |
+| **M7** Inventory, HUD, wellbeing, shop | B4, A7, B6, B7 | M3, M6 | HUD matches state; wellbeing toast; shop errors verbatim |
+| **M8** Badges and achievements | B9 | M3, M5 | Four badge statuses; one toast per unlock; A08 n/5 |
+| **M9** Debrief, save/load, replay, settings | B8, B10, B11 | M7, M8 | Full run to debrief; save → continue; replay |
+| **M10** End-to-end and offline validation | A8, §11 end-to-end checklist, packaged run | M9 | Packaged, offline playthrough (rebuild needs owner approval) |
+
+### M1 — Foundation
 
 **F0 — Dependencies and renderer scaffold**
 - **Objective:** a React + Phaser renderer replaces the harness, built by electron-vite.
 - **Inspect:** `electron.vite.config.ts`, `src/renderer/index.html`, `src/renderer/harness.ts`, `src/main/index.ts` (CSP, window size).
-- **Create or modify:** `package.json` (add `react`, `react-dom`, `phaser@3.90.0`, `@vitejs/plugin-react` compatible with Vite 7; types), the `electron.vite.config.ts` renderer block (`plugins: [react()]`, input `index.html`), `src/renderer/index.html`, `src/renderer/main.tsx`.
-- **Contracts:** none.
-- **Assets:** none.
+- **Create or modify:** `package.json` (add `react`, `react-dom`, `phaser@3.90.0`, `@vitejs/plugin-react` compatible with Vite 7, and types), the `electron.vite.config.ts` renderer block (`plugins: [react()]`, input `index.html`), `src/renderer/index.html`, `src/renderer/main.tsx`.
+- **Contracts:** none. **Assets:** none.
 - **Steps:**
   1. Install the dependencies (frontend decision; this is the first dependency change).
   2. Mount `<App/>`.
-  3. Keep `harness.ts` until C1, then delete it.
+  3. Keep `harness.ts` until F1 works, then delete it.
 - **Dependencies:** none.
-- **Done when:** `npm run dev` shows the React root. `npm run build` passes. `npm test` (322) stays green.
-- **CSP note:** production CSP is `script-src 'self'`, `style-src 'self' 'unsafe-inline'`, `img-src 'self' data:`, `connect-src 'none'`. Bundle all assets locally. If Phaser needs `blob:` for something, ask the backend owner to adjust `src/main/index.ts`.
+- **Done when:**
+  - `npm run dev` shows the React root;
+  - `npm run build` passes;
+  - `npm test` (329) stays green;
+  - one PNG, one tilemap JSON and one audio file load in a **production** build.
+- **CSP (critical; verify in M1):** the production CSP is `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; media-src 'self'; connect-src 'none'`. The dev CSP allows `localhost`, so problems only appear in builds.
+  - Phaser 3's loader uses XHR for JSON, tilemaps and WebAudio, which `connect-src 'none'` blocks, and by default it turns images into `blob:` URLs, which `img-src` doesn't allow. This hasn't been verified, because Phaser isn't installed.
+  - Intended safe pattern:
+    - import assets through Vite;
+    - `loader: { imageLoadType: 'HTMLImageElement' }`;
+    - add tilemaps from imported JSON with `this.cache.tilemap.add(key, { format: Phaser.Tilemaps.Formats.TILED_JSON, data })`;
+    - `audio: { disableWebAudio: true }`;
+    - bundle fonts locally.
+  - If it still fails, ask the backend owner to adjust `src/main/index.ts`. Don't add a CSP `<meta>` in the renderer.
 
 **F1 — EngineStore and services**
 - **Objective:** one store wrapping `GameEngine`, plus thin bridge services.
@@ -649,45 +681,41 @@ Verified in `tests/docs-examples.test.ts` (6.5).
 - **Contracts:** `GameState`, `CommandResult`, `EngineEvent`, `SignalBridge`.
 - **Steps:**
   1. `newGame(input|profile|save)`.
-  2. `dispatch(fn: (e) => CommandResult)` applies the result and emits events.
+  2. `dispatch(fn: (e) => CommandResult)` applies the result and emits events, including `badgeEarned`.
   3. Event-key de-duplication (§7).
   4. Scene-directive caching (§7).
+  5. `tick(ms)`: accumulate Phaser `delta` and call `engine.tick` about every 100 ms. Each call deep-copies the state (measured ≈ 0.4 ms with 23 decisions).
 - **Done when:** a unit test (Vitest) drives the store through `createGame` → `resolveEvent` → `executeAction` with no React or Phaser involved.
 
-### Track A — Game World (Frontend Developer 1)
+### Task reference (Phaser world: A-tasks; React UI: B-tasks; one owner, scheduled by the milestone table)
 
-| Task | Objective | Inspect | Create/modify | Contracts | Assets | Done when |
-|---|---|---|---|---|---|---|
-| **A1** Boot/Preload | Load assets by the IDs in §9 with a placeholder fallback | §9 | `game/config.ts`, `game/scenes/Boot.ts`, `Preload.ts`, `PhaserGame.tsx` | — | all | A progress bar; missing IDs logged, not crashing |
-| **A2** House map | Fixed layout; theme tileset swap; collision; anchors | `getWorldConfig()`, §4.2 | `assets/maps/house.tmj`, `game/data/layout.ts`, `game/scenes/House.ts` | `theme`, `interactables[]` | house tilesets | Both themes render the same collision; every interactable ID has an anchor |
-| **A3** Player + interaction | 4-direction movement at 90 px/s; 24 px prompts; E/Space → `interact` | §4.4 | `game/systems/PlayerController.ts`, `InteractionSystem.ts` | `interact`, `ActionOption` | player sprites | Walking into walls stops; the prompt appears at 24 px; interact opens a menu or event (checkpoint **C2** with B5) |
-| **A4** NPCs | Household NPCs, dependents, pets | §4.3 | `game/systems/NpcSystem.ts` | `characters[]`, `npcCues` | NPC sprites | ≤ 3 NPCs placed; `NPC_M*` interact; dependents never interactable |
-| **A5** SceneDirective renderer | Weather, lighting, flood overlay, effects, props, NPC cues, audio, transitions | [FRONTEND_BACKEND_CONTRACTS.md](../implementation/FRONTEND_BACKEND_CONTRACTS.md) | `game/systems/SceneDirectiveRenderer.ts`, `AudioDirector.ts` | `SceneDirective`, `suggestScene`, `mergeSceneSuggestion` | §9 effects, lighting, flood, props, audio | Re-applying the same directive changes nothing; outage never shows electric light; the flood overlay equals `directive.flood`; ambient audio restarts only on a key change |
-| **A6** Other scenes | Shop, Street, Evacuation, HomeImpact, Aftermath; route `sceneChanged` | §2.4 | `game/scenes/*.ts` | `SceneId`, `skipToNextMilestone` | shop/center/street tilesets | Each `sceneChanged` loads the right scene; a full run traverses them (checkpoint **C3**) |
-| **A7** Wellbeing indicator | Player wellbeing meter (not "health") plus a toast on change | §5.11 | `ui/hud/Wellbeing.tsx` (shared with B4) | `player.wellbeing`, `wellbeingEvents` | icon | Shows `current/max`; a toast shows the rule `reason` when an event is appended |
-| **A8** Performance | 60 fps on the GTX 1650 Ti laptop while the AI generates | — | — | — | — | No frame stalls while awaiting AI (all calls async) |
-
-### Track B — UI/UX (Frontend Developer 2)
-
-| Task | Objective | Inspect | Create/modify | Contracts | Done when |
-|---|---|---|---|---|---|
-| **B1** App shell | Screen router S1–S13; Title; Loading | §3 | `app/App.tsx`, `ui/title/*`, `ui/loading/*` | `ai.status/onStatus`, `save.list` | Navigation works; loading proceeds on `ready` or `unavailable` |
-| **B2** Q0 + onboarding | Render Q0, custom (Q1–Q8, Q2b) and random (R1–R4) from `ONBOARDING_QUESTIONS` | `src/shared/contracts/onboarding.ts` | `ui/onboarding/*` | `CustomOnboarding`, `RandomOnboarding`, `MAX_HOUSEHOLD_SIZE`, `createGame` | Exclusive and conditional rules enforced; a live Q3 total; backend `issues` shown per field; both paths start a game |
-| **B3** Customization + review | Theme, player, appearance, minimum-budget challenge; review roster, exposure (fictional), budget | `getProfile()`, `getWorldConfig()` | `ui/onboarding/Customization.tsx`, `Review.tsx` | `Customization`, `HouseholdProfile` | Choices reflected in the profile; minimum budget gives ₱800 |
-| **B4** HUD | Clock, speed controls, phase, warning, cash, phone, go-bag, wellbeing (with A7), AI badge | §5.11 | `ui/hud/*` | `GameState`, `setSpeed`, `getGoBagStatus` | Updates ≈ 4 Hz; critical-speed banner; landfall countdown only after reveal |
-| **B5** Dialogs | EventDialog (AI/fallback, ordered choices, ⚠ unsafe), InteractionMenu, DiscoveryCard | §4.4, §6.2, §7 | `ui/dialogs/*` | `buildScenarioRequest`, `generateScenario`, `getEventChoices`, `resolveEvent`, `ActionOption.kind` | One dialog per event key; stale AI text discarded; discovery takes no game time (checkpoint **C2**) |
-| **B6** Inventory | House vs go-bag lists; missing go-bag categories | §5 items | `ui/inventory/*` | `state.house/goBag`, `ITEM_LABELS`, `missingGoBagItems` | Matches state after every action |
-| **B7** Shop | Catalog, quantity, purchase, errors | §5 shop | `ui/shop/*` | `getShopCatalog`, `purchase`, `RETURN_HOME` | Prices and stock from the engine; errors shown; `pause('shop')` while open |
-| **B8** Debrief + plan | Score and ending; categories; Handa breakdown; 12 badges with status; timeline; lessons; checklist (the plan); narration; `markPlanViewed` | `src/shared/contracts/debrief.ts`, §6.4 | `ui/debrief/*` | `evaluate`, `narrateDebrief`, `recordRun`, `markPlanViewed`, `getBadgeCatalog` | The ending label and Handa badge are visually separate; "Not applicable" is neutral; the plan view triggers A10 (checkpoint **C3**) |
-| **B9** Achievements | Screen with progress/target; unlock toasts from `newlyUnlocked`; mid-run badge toasts from `badgeEarned` (B06, §5.12) | §3 S12 | `ui/achievements/*` | `achievements.read`, `getAchievementCatalog` | Progress survives restart; each toast shows once |
-| **B10** Saves and replay | Continue/save slots, delete profile, replay | [LOCAL_STORAGE_SETUP.md](../setup/LOCAL_STORAGE_SETUP.md) | `ui/menus/*` | `save.*`, `profile.*`, `loadGame`, `startRun` | Save → quit → continue restores state; replay keeps the household with a new seed |
-| **B11** Settings | Volume, mute, text size | — | `ui/settings/*` | — (localStorage; gap G5) | Persists across restarts |
+| Task | Milestone | Objective | Inspect | Create/modify | Contracts | Assets | Done when |
+|---|---|---|---|---|---|---|---|
+| **A1** Boot/Preload | M2 | Load assets by the IDs in §9 with a placeholder fallback | §9 | `game/config.ts`, `game/scenes/Boot.ts`, `Preload.ts`, `PhaserGame.tsx` | — | all (generated placeholders first) | A progress bar; missing IDs logged, not crashing |
+| **A2** House map | M2 | Fixed layout; theme tileset swap; collision; anchors | `getWorldConfig()`, §4.2 | `assets/maps/house.tmj`, `game/data/layout.ts`, `game/scenes/House.ts` | `theme`, `interactables[]` | house tilesets | Both themes render the same collision; every interactable ID has an anchor |
+| **A3** Player + interaction | M2/M3 | 4-direction movement at 90 px/s; 24 px prompts; E/Space → `interact` | §4.4 | `game/systems/PlayerController.ts`, `InteractionSystem.ts` | `interact`, `ActionOption` | player sprites | Walking into walls stops; the prompt appears at 24 px; interact opens a menu or event |
+| **A4** NPCs | M6 | Household NPCs, dependents, pets | §4.3 | `game/systems/NpcSystem.ts` | `characters[]`, `npcCues` | NPC sprites | ≤ 3 NPCs placed; `NPC_M*` interact; dependents never interactable |
+| **A5** SceneDirective renderer | M6 | Weather, lighting, flood overlay, effects, props, NPC cues, audio, transitions | [FRONTEND_BACKEND_CONTRACTS.md](../implementation/FRONTEND_BACKEND_CONTRACTS.md) | `game/systems/SceneDirectiveRenderer.ts`, `AudioDirector.ts` | `SceneDirective`, `suggestScene`, `mergeSceneSuggestion` | §9 effects, lighting, flood, props, audio | Re-applying the same directive changes nothing; outage never shows electric light; the flood overlay equals `directive.flood`; ambient audio restarts only on a key change |
+| **A6** Other scenes | M6 | Shop, Street, Evacuation, HomeImpact, Aftermath; route `sceneChanged` | §2.4, §5.13 | `game/scenes/*.ts` | `SceneId`, `skipToNextMilestone` | shop/center/street tilesets | Each `sceneChanged` loads the right scene; a household in transit at landfall stays on STREET; a full run traverses them |
+| **A7** Wellbeing indicator | M7 | Player wellbeing meter (not "health") plus a toast on change | §5.11 | `ui/hud/Wellbeing.tsx` | `player.wellbeing`, `wellbeingEvents` | icon | Shows `current/max`; a toast shows the rule `reason` when an event is appended |
+| **A8** Performance | M10 | 60 fps on the GTX 1650 Ti laptop while the AI generates | — | — | — | — | No frame stalls while awaiting AI (all calls async) |
+| **B1** App shell | M5 | Screen router S1–S13; Title; Loading | §3 | `app/App.tsx`, `ui/title/*`, `ui/loading/*` | `ai.status/onStatus`, `save.list` | — | Navigation works; loading proceeds on `ready` or `unavailable` |
+| **B2** Q0 + onboarding | M5 | Render Q0, custom (Q1–Q8, Q2b) and random (R1–R4) from `ONBOARDING_QUESTIONS` | `src/shared/contracts/onboarding.ts` | `ui/onboarding/*` | `CustomOnboarding`, `RandomOnboarding`, `MAX_HOUSEHOLD_SIZE`, `createGame` | — | Exclusive and conditional rules enforced; a live Q3 total; backend `issues` shown per field; both paths start a game |
+| **B3** Customization + review | M5 | Theme, player, appearance, minimum-budget challenge; review roster, exposure (fictional), budget | `getProfile()`, `getWorldConfig()` | `ui/onboarding/Customization.tsx`, `Review.tsx` | `Customization`, `HouseholdProfile` | character sprites | Choices reflected in the profile; minimum budget gives ₱800 |
+| **B4** HUD | M7 | Clock, speed controls, phase, warning, cash, phone, go-bag, wellbeing (A7), AI badge | §5.11 | `ui/hud/*` | `GameState`, `setSpeed`, `getGoBagStatus` | HUD icons | Updates ≈ 4 Hz; critical-speed banner; landfall countdown only after reveal |
+| **B5** Dialogs | M3/M4 | InteractionMenu, DiscoveryCard (M3); EventDialog (AI/fallback, ordered choices, ⚠ unsafe) (M4) | §4.4, §6.2, §7 | `ui/dialogs/*` | `buildScenarioRequest`, `generateScenario`, `getEventChoices`, `resolveEvent`, `ActionOption.kind` | UI kit | One dialog per event key; stale AI text discarded; discovery takes no game time |
+| **B6** Inventory | M7 | House vs go-bag lists; missing go-bag categories | §5 items | `ui/inventory/*` | `state.house/goBag`, `ITEM_LABELS`, `missingGoBagItems` | item icons | Matches state after every action |
+| **B7** Shop | M7 | Catalog, quantity, purchase, errors | §5 shop | `ui/shop/*` | `getShopCatalog`, `purchase`, `RETURN_HOME` | — | Prices and stock from the engine; errors shown; `pause('shop')` while open |
+| **B8** Debrief + plan | M9 | Score and ending; categories; Handa breakdown; 12 badges with status; timeline; lessons; checklist (the plan); narration; `markPlanViewed` | `src/shared/contracts/debrief.ts`, §6.4 | `ui/debrief/*` | `evaluate`, `narrateDebrief`, `recordRun`, `markPlanViewed`, `getBadgeCatalog` | badge icons | The ending label and Handa badge are visually separate; "Not applicable" is neutral; the plan view triggers A10 |
+| **B9** Badges + achievements | M3 (toast) / M8 | Screen with progress/target; unlock toasts from `newlyUnlocked`; mid-run badge toasts from `badgeEarned` (B06, §5.12) | §3 S12 | `ui/achievements/*` | `achievements.read`, `getAchievementCatalog` | achievement icons | Progress survives restart; each toast shows once |
+| **B10** Saves and replay | M9 | Continue/save slots, delete profile, replay | [LOCAL_STORAGE_SETUP.md](../setup/LOCAL_STORAGE_SETUP.md) | `ui/menus/*` | `save.*`, `profile.*`, `loadGame`, `startRun` | — | Save → quit → continue restores state; replay keeps the household with a new seed |
+| **B11** Settings | M9 | Volume, mute, text size | — | `ui/settings/*` | — (localStorage; gap G5) | — | Persists across restarts |
 
 ## 11. Testing
 
 | Level | What | How |
 |---|---|---|
-| Backend contracts | Must stay green | `npm test` (322), `npm run typecheck` |
+| Backend contracts | Must stay green | `npm test` (329), `npm run typecheck` |
 | Store (F1) | Store applies results, de-duplicates events, caches directives | Vitest in `src/renderer/**/__tests__` (add to `vitest.config.ts` include, coordinating with the backend owner) |
 | Screens | S2–S4: valid and invalid inputs show the right errors. S7: Handa vs ending shown separately | Component tests or manual checklist |
 | World | Collision; prompts at 24 px; scene routing; directive application is idempotent; outage lighting | Manual checklist per A-task |
@@ -703,5 +731,6 @@ Verified in `tests/docs-examples.test.ts` (6.5).
 | BK-3 | No authored sentences for discovery results or for community-action results | The UI needs copy | Build from state (§6.3, §5.12); proposed templates in CONTENT_REVIEW §2 and §4 |
 | BK-5 | No state subscription (G1), no autosave (G2), no settings store (G5) | Store and UI must handle these | §2.1, §7; save on `phaseChanged` |
 | BK-7 | Playwright/E2E tooling not installed | No automated UI tests yet | Manual checklist, or add Playwright later |
+| R-CSP | Phaser asset loading under the production CSP (`connect-src 'none'`, no `blob:` images) is unverified | Assets could fail only in packaged/production builds | Prove in M1 (F0); if it fails, the backend owner adjusts `src/main/index.ts` |
 
-Nothing above blocks C1–C4.
+Nothing above blocks starting M1. R-CSP must be resolved in M1, before art and audio work.

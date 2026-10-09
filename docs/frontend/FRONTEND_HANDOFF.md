@@ -1,24 +1,32 @@
 # Frontend Handoff
 
-**Audience:** the two frontend developers.
-- **Dev 1** owns the Game World (Phaser).
-- **Dev 2** owns the UI/UX (React).
+**Audience:** the frontend developer (or frontend Claude Code instance). There is **one frontend workstream** covering the Phaser world (A-tasks), the React UI (B-tasks) and integration.
 
-This is the one-page split. The full detail for every task is in [FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md) (task IDs match). Every API is in [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md).
+This is the one-page summary. The full detail for every task is in [FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md) (task IDs match). Every API is in [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md).
 
-**State on 2026-10-09:**
-- The backend is complete, with 322 tests passing (2026-10-10).
+**State on 2026-10-10:**
+- The backend is complete, with 329 tests passing (2026-10-10).
 - **No frontend code or assets exist.** `src/renderer/harness.ts` is a dev harness to be replaced.
 
-## Do these together first
+## Order of work (milestones M1–M10, blueprint §10)
+1. **M1** foundation (F0, F1) → **M2** map + movement (A1, A2, A3) → **M3** interactions + actions (A3, B5 menu, B5b, badge toast) → **M4** event dialogs (B5).
+   - **First playable vertical slice:** household → house → move → phone → `CHECK_BULLETIN` → `SHARE_VERIFIED_ADVISORY` → Bayanihan toast from `badgeEarned` (blueprint §6.5).
+2. **M5** onboarding + customization (B1–B3).
+3. **M6** SceneDirective + scenes (A4–A6).
+4. **M7** HUD, wellbeing, inventory, shop (B4, A7, B6, B7).
+5. **M8** badges + achievements (B9).
+6. **M9** debrief, save/load, replay, settings (B8, B10, B11).
+7. **M10** end-to-end + offline validation.
+
+## M1 Foundation
 | Task | Backend | Done when |
 |---|---|---|
 | **F0** Install React and Phaser 3.90; React root replaces the harness | — | `npm run dev` shows the React app; `npm test` still passes |
 | **F1** `EngineStore`: one `GameEngine`, `dispatch(cmd)` → applies `result.state`, emits `result.events` | `createGame`, `startRun`, `loadGame`, `CommandResult`, `EngineEvent` | A Vitest test drives create → resolveEvent → executeAction through the store |
 
-Shared files (agree before editing): `engineStore.ts`, `App.tsx`, `PhaserGame.tsx`, the `renderer` block of `electron.vite.config.ts`, and `package.json`.
+M1 must also prove asset loading under the **production CSP** (blueprint §10 F0, gap R-CSP).
 
-## Dev 1 — Game World
+## Phaser world tasks
 
 | Task | Backend method | Contract fields | Expected behaviour | Depends on | Acceptance |
 |---|---|---|---|---|---|
@@ -28,9 +36,9 @@ Shared files (agree before editing): `engineStore.ts`, `App.tsx`, `PhaserGame.ts
 | A4 NPCs | `getWorldConfig()` | `characters[]{spriteBase,clothingVariant,paletteId,visibleNpc,npcId,dependent}`, `pets` | ≤ 3 household NPCs; dependents not interactable; **no neighbour NPC** | A2 | `interact('NPC_M2')` opens EV03 or a menu |
 | A5 Scene directive | `getSceneDirective()`, `ai.suggestScene`, `mergeSceneSuggestion` | `weather, lighting, flood, effects, props, npcCues, audio, mood, transition, basisKey` | Recompute after state-changing results; apply only on diff | A2, A4 | Same directive twice = no change; boarding the window shows `WINDOW_BOARDED`; no electric light during an outage |
 | A6 Other scenes | `tick`, `skipToNextMilestone` | `state.scene`, `sceneChanged`, `sel.householdLocation` | Route `HOUSE/SHOP/STREET/EVACUATION/HOME_IMPACT/AFTERMATH`; a household travelling at landfall stays on `STREET` | A5 | A full run visits every scene it should; a late departure never shows `HOME_IMPACT` |
-| A7 Wellbeing meter (with Dev 2) | — | `player.wellbeing{current,max}`, `wellbeingEvents[]` | Meter plus a reason toast on change | F1 | Labelled "wellbeing", never "health" |
+| A7 Wellbeing meter | — | `player.wellbeing{current,max}`, `wellbeingEvents[]` | Meter plus a reason toast on change | F1 | Labelled "wellbeing", never "health" |
 
-## Dev 2 — UI/UX
+## React UI tasks
 
 | Task | Backend method | Contract fields | Expected behaviour | Depends on | Acceptance |
 |---|---|---|---|---|---|
@@ -48,10 +56,10 @@ Shared files (agree before editing): `engineStore.ts`, `App.tsx`, `PhaserGame.ts
 | B11 Settings | — (no backend store) | — | Volume, mute, text size in localStorage | B1 | Settings persist |
 
 ## Checkpoints
-- **C1:** F1 done.
-- **C2:** A3 + B5 (first playable loop).
-- **C3:** A6 + B8 (full run to debrief and achievements).
-- **C4:** packaged and offline. See [WINDOWS_PACKAGING.md §5](../setup/WINDOWS_PACKAGING.md); this needs owner approval before rebuilding.
+- **M1:** store drives the engine headlessly; production-CSP asset load works.
+- **M4:** first playable vertical slice (above).
+- **M9:** full run to the debrief and achievements.
+- **M10:** packaged and offline. See [WINDOWS_PACKAGING.md §5](../setup/WINDOWS_PACKAGING.md); this needs owner approval before rebuilding.
 
 ## Open backend items (don't work around them in the UI)
 - **BK-1 (fixed):** late departures crossing landfall now stay in transit; departures that couldn't arrive before route closure are rejected.

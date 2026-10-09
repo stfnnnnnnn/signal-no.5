@@ -49,7 +49,7 @@ Prerequisites: Windows 10/11 x64, Git, **Node.js ≥ 22.12** (Node 24 LTS recomm
 git clone <repository-url> "signal no.5"
 cd "signal no.5"
 npm install
-npm test            # 322 backend tests
+npm test            # 329 backend tests
 npm run typecheck   # tsc --noEmit
 npm run dev         # Electron + Vite dev server; opens the backend dev harness
 ```
