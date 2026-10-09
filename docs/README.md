@@ -67,6 +67,9 @@ When two documents disagree:
 |---|---|---|---|
 | [frontend/README.md](frontend/README.md) | **Start here (frontend):** what's done, what to build, ownership | Frontend | Guide |
 | [frontend/FRONTEND_GETTING_STARTED.md](frontend/FRONTEND_GETTING_STARTED.md) | Setup, mock data, first milestone, common mistakes | Frontend | Guide |
+| [frontend/FRONTEND_IMPLEMENTATION_BLUEPRINT.md](frontend/FRONTEND_IMPLEMENTATION_BLUEPRINT.md) | **Canonical frontend build guide**: architecture, screens, world, exact ID mappings, asset manifest, verified examples, two-track task plan, gaps | Frontend | Guide |
+| [frontend/FRONTEND_HANDOFF.md](frontend/FRONTEND_HANDOFF.md) | One-page task split for Frontend Dev 1 (world) and Dev 2 (UI) | Frontend | Handoff |
+| [implementation/CONTENT_REVIEW.md](implementation/CONTENT_REVIEW.md) | Educational content needing validation against official PH guidance; proposed (unapplied) changes | Content reviewers, backend | Review |
 | [frontend/FRONTEND_BACKEND_INTEGRATION.md](frontend/FRONTEND_BACKEND_INTEGRATION.md) | Every API call, with types, examples, errors and gaps | Frontend | Ref |
 | [frontend/UI_GAMEPLAY_REQUIREMENTS.md](frontend/UI_GAMEPLAY_REQUIREMENTS.md) | Scenes, sprites, HUD, overlays (MVP vs optional) | Frontend | Spec digest |
 | [implementation/FRONTEND_BACKEND_CONTRACTS.md](implementation/FRONTEND_BACKEND_CONTRACTS.md) | **Scene directive contract** (weather, lighting, flood, props, NPC cues, audio): authority rules, runtime flow, every asset ID the frontend must provide | Frontend (Phaser), backend | Ref |
@@ -76,9 +79,10 @@ When two documents disagree:
 |---|---|
 | `tests/*.test.ts` | Household, init, actions, clock/scheduler, shop, storm/evacuation/aftermath, evaluation/badges, AI context/validation/guard |
 | `tests/main/*.test.ts` | Model-server manager (real child process + `fake-llama-server.mjs`), AI service (real HTTP fake model), save store (temp folders) |
-| `tests/helpers.ts`, `tests/fixtures/households.ts` | `newGame`, `playToEnd`, `resolveFirst`; `familySurvey()`, `aloneSurvey()` |
+| `tests/helpers.ts`, `tests/fixtures/onboarding.ts`, `tests/diligent.ts` | `newGame`, `playToEnd`, `resolveFirst`; `customFamily()`, `customSolo()`, `randomHousehold()`; `playDiligently` (a Handa-quality run) |
+| `tests/docs-examples.test.ts` | Executable versions of the blueprint §6 examples |
 
-Run with `npm test` (289 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
+Run with `npm test` (293 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
 
 ## 11. Packaging
 | Document | Description | Audience | Type |

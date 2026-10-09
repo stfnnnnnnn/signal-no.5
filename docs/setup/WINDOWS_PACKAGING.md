@@ -56,15 +56,59 @@ It runs two real scenario generations, a debrief narration and a save round-trip
 - `debriefSource: ai`, `saveRoundTrip: true`;
 - no `llama-server.exe` left afterwards.
 
-## 5. Offline test: **PENDING**
+## 5. Rebuild and offline (airplane-mode) verification: **PENDING APPROVAL**
 
-The airplane-mode run has **not** been done yet. To do it:
-1. Turn on Airplane mode (or disconnect Wi-Fi and unplug Ethernet).
-2. Confirm there's no connectivity.
-3. Run the self-test above and check `selftest.json`, with the same expectations as §4.
-4. Reconnect.
+**Status, 2026-10-09:**
+- The packaged folder in `dist\win-unpacked` was built **before** the scene-directive, onboarding v2, exposure, wellbeing, badge and achievement commits. It's stale and doesn't contain the current backend.
+- A rebuild is safe:
+  - `scripts/pack.mjs` and `package.json` have had no changes since they were first committed (`aa281ac`), which is the configuration the last build was verified with;
+  - the runtime and model inputs are unchanged;
+  - the build only rewrites `dist\` and `out\` (both git-ignored).
+- **Don't run it until the project owner approves.**
 
-Record the result in [docs/implementation/IMPLEMENTATION_PLAN.md](../implementation/IMPLEMENTATION_PLAN.md).
+### 5.1 Rebuild
+```powershell
+# 1. Close any running SignalNo5.exe (the build overwrites dist\win-unpacked).
+Get-Process SignalNo5, llama-server -ErrorAction SilentlyContinue      # must print nothing
+# 2. Confirm the tree is clean and tests pass.
+git status --short
+npm test; npm run typecheck
+# 3. Point at the runtime and model (same inputs as the last verified build).
+$env:SIGNAL_LLM_DIR    = '<runtime folder>'          # llama.cpp b11517 CUDA 12.4 + cudart DLLs
+$env:SIGNAL_MODEL_FILE = '<path>\Qwen3-4B-Instruct-2507-Q4_K_M.gguf'
+npm run pack                                         # ≈ 80 s, ≈ 3.8 GB folder
+```
+
+### 5.2 Online self-test (baseline)
+```powershell
+# Remove the CUDA toolkit from PATH for this shell, so only the bundled DLLs are used.
+$env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'CUDA' }) -join ';'
+Remove-Item "$env:APPDATA\signal-no5\selftest.json" -ErrorAction SilentlyContinue
+.\dist\win-unpacked\SignalNo5.exe --self-test
+Get-Content "$env:APPDATA\signal-no5\selftest.json"
+```
+
+### 5.3 Offline self-test
+1. Turn on **Airplane mode**, or disable Wi-Fi and unplug Ethernet.
+2. Confirm that `Test-NetConnection 1.1.1.1 -Port 443` reports `TcpTestSucceeded : False`.
+3. Repeat the two commands from §5.2 (delete `selftest.json`, then run `--self-test`).
+4. After it exits, check that `Get-Process llama-server -ErrorAction SilentlyContinue` prints nothing.
+5. Reconnect.
+
+### 5.4 Pass criteria (both runs)
+| Field in `selftest.json` | Expected |
+|---|---|
+| `packaged` | `true` |
+| `aiStatus` | `"ready"` (on a machine without an NVIDIA GPU: `"unavailable"`, and the scenarios use fallback; that's still a pass for the "runs offline" check) |
+| `scenarios[]` | 2 entries, `source: "ai"`, action IDs exactly equal to the engine's list |
+| `scenes[]` | present; `mergedSource` is `"ai-merged"` or `"deterministic"` (both valid; the AI may suggest nothing) |
+| `debriefSource` | `"ai"` |
+| `saveRoundTrip` | `true` |
+| Process check | no `llama-server.exe` left running |
+
+Record the results (date, both runs, timings) in [IMPLEMENTATION_PLAN.md](../implementation/IMPLEMENTATION_PLAN.md).
+
+**Rollback:** if the new build fails, the previous folder is gone (it's overwritten). Rebuild from the previous commit (`git stash; git checkout <commit>; npm run pack`) or fix forward. To keep the old build, copy `dist\win-unpacked` somewhere else before §5.1.
 
 ## 6. Common errors
 

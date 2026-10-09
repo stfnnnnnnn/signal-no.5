@@ -12,15 +12,15 @@ Derived from the three specs in [`docs/specs/`](../specs/): **GD** = Complete Ga
 | Scene ID | MVP | What the player sees | Backend hook |
 |---|---|---|---|
 | TITLE | MVP | Start / Continue / Settings | `save.list()`, `ai.status()` |
-| ONBOARDING | MVP | Household survey (26 questions, HF) | `createGame()` → `error.issues` |
-| CUSTOMIZATION | MVP | Player character (Q25) and house theme (Q26), configuration review (HF "Final Configuration Review") | `getProfile()`, `getWorldConfig()` |
+| ONBOARDING | MVP | Q0 mode, then 8 custom questions or 4 random steps (§13) | `ONBOARDING_QUESTIONS`, `createGame()` → `error.issues` |
+| CUSTOMIZATION | MVP | Theme, player character, appearance, minimum-budget challenge; configuration review | `getProfile()`, `getWorldConfig()` |
 | HOUSE | MVP | Explorable fixed-layout house | `interact`, `executeAction`, `tick` |
 | SHOP | MVP | Small community shop with shopkeeper and shelves | `getShopCatalog`, `purchase`, `RETURN_HOME` |
 | STREET | MVP (simple) | Shown while travelling to evacuation (`scene === 'STREET'`). Can be a short transition | `skipToNextMilestone()` |
 | EVACUATION | MVP | Simplified evacuation center (arrival EV11, staying through impact) | events EV10–EV13 |
 | HOME_IMPACT | MVP | The house during the storm (darker, rain, wind, flood overlay) | `environment.*`, EV10/EV13 |
 | AFTERMATH | MVP | Recovery days 1–3 | EV14–EV16, `aftermathDay` |
-| RESULTS | MVP | Debrief, score, badges, replay | `evaluateRun`, `narrateDebrief` |
+| RESULTS | MVP | Debrief, score, badges, replay | `engine.evaluate()`, `narrateDebrief`, `achievements.recordRun` |
 | BARANGAY | Optional | Information point (the action exists; no scene in the backend, gap G4) | `BARANGAY_VISIT` |
 
 ## 2. Characters (GD §4, HF Q25)
@@ -42,7 +42,7 @@ Derived from the three specs in [`docs/specs/`](../specs/): **GD** = Complete Ga
   - **16×16 px tiles**, a crisp pixel-art look (nearest-neighbor scaling, integer zoom), internal resolution 320×180 or 384×216 (project_context §8).
   - A collision layer that never changes between themes or households.
   - Every interactable from `getWorldConfig().interactables` is placed and reachable.
-- **Themes (HF Q26):**
+- **Themes (`customization.theme`):**
   - **Modern Filipino:** contemporary furniture, tiled floors, neutral or cool palette.
   - **Traditional Filipino:** wood textures, warmer palette, traditional furnishings.
   - The same geometry, collision and interaction points for both. Only skins and decorative props change.
@@ -129,7 +129,7 @@ On interact, call `engine.interact(id)`. Then either open the event dialog or sh
   - Six competency bars from `categories[]`. Hide excluded categories (`included: false`).
   - Decision timeline (`timeline[]`) and strengths/gaps with lesson text (`learningPoints`).
   - Household checklist (`checklistItems`) and the AI or fallback summary (`narrateDebrief`).
-  - Badge gallery B01–B10 (names from `BADGES`), showing badges earned this run and lifetime badges (`badges.read()`).
+  - Badge gallery B01–B12 (names from `engine.getBadgeCatalog()`), showing this run's statuses and lifetime badges (`badges.read()`). See §12b.
   - Replay options: same household (`startRun`) or a new household (`createGame`).
 - **Optional:** badge unlock animations, printable checklist.
 

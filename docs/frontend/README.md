@@ -6,13 +6,14 @@ Start here if you're building the Signal No. 5 game UI (Phaser + React).
 
 | Backend: done and tested (you consume it) | Frontend: not started (you build it) |
 |---|---|
-| Survey validation and household generation (26 questions) | React survey, review and character/theme selection screens |
+| Onboarding v2 validation and household generation (Q0 + 8 custom questions or 4 random steps) | Q0, onboarding, customization and review screens |
 | Authoritative `GameState`, actions, consequences, decision log | Phaser house scene: tilemap, 4-direction movement, collision |
 | Hybrid clock 1×–32×, milestones, auto-pause | HUD: clock, speed controls, phase, warnings, cash, go-bag status |
 | Inventory, go-bag, shop with prices and stock | Inventory/go-bag panel, shop scene and purchase UI |
 | EV01–EV16 events, engine-chosen variants and choices | Dialogue panel with choices (⚠ for unsafe ones), "AI-personalized" label |
 | Evacuation, impact, aftermath, scene changes | Evacuation/street, home-impact and aftermath scenes, storm overlays |
-| Scoring, endings, badges, lessons, checklist | Debrief and achievements screens |
+| Scoring, endings, badges B01–B12, Handa evaluation, achievements A01–A10, lessons, checklist | Debrief, badge gallery and achievements screens |
+| Exposure-based flood progression, player wellbeing, scene directives | Storm rendering from `SceneDirective`, wellbeing meter |
 | Local AI dialogue with validation and fallback | Loading screen until AI status is `ready` or `unavailable` |
 | Saves, badges, profile (local JSON via IPC) | Save/continue/replay menus, "delete my profile" control |
 
@@ -21,7 +22,7 @@ Start here if you're building the Signal No. 5 game UI (Phaser + React).
 ```
 React UI ─┐                                        ┌─ window.signal.ai.*      (async, IPC → main → llama-server)
           ├─▶ GameEngine (src/core, synchronous) ──┤
-Phaser ───┘    the ONLY source of game state       └─ window.signal.save/badges/profile.* (async, IPC → JSON files)
+Phaser ───┘    the ONLY source of game state       └─ window.signal.save/badges/achievements/profile.* (async, IPC → JSON files)
 ```
 
 1. **Engine (synchronous):** import from `src/core/engine.ts` and call its methods directly in the renderer.
@@ -29,7 +30,7 @@ Phaser ───┘    the ONLY source of game state       └─ window.signal.
 
 ## Authoritative contracts
 
-- `src/shared/contracts/*.ts`: Zod schemas and types (`SurveyResponses`, `HouseholdProfile`, `GameState`, `DecisionRecord`, `ScenarioAIRequest`/`ScenarioContent`, `DebriefEvaluation`).
+- `src/shared/contracts/*.ts`: Zod schemas and types (`CustomOnboarding`/`RandomOnboarding`, `HouseholdProfile`, `GameState`, `DecisionRecord`, `ScenarioAIRequest`/`ScenarioContent`, `DebriefEvaluation`).
 - `src/core/engine.ts`: `createGame`, `startRun`, `loadGame`, `GameEngine`, `EngineEvent`, `ActionOption`, `ShopCatalogEntry`.
 - `src/shared/bridge.ts`: `SignalBridge` (`window.signal`).
 - Display metadata (labels, names): `src/core/content/badges.ts`, `items.ts`, `events.ts` (`title`), `interactables.ts`.
@@ -50,7 +51,7 @@ If the backend lacks something you need, raise it. Don't work around it in the U
 ```powershell
 npm install
 npm run dev        # Electron + Vite (hot reload) at http://localhost:5173 inside the app window
-npm test           # backend tests must stay green (289)
+npm test           # backend tests must stay green (293)
 npm run typecheck
 ```
 
@@ -58,6 +59,7 @@ No GPU or model is needed: AI status becomes `unavailable` and dialogue uses rev
 
 ## Next
 
+1. **[FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md):** the canonical, task-by-task implementation guide (architecture, mappings, assets, verified examples, plan). **[FRONTEND_HANDOFF.md](FRONTEND_HANDOFF.md)** is the one-page two-developer split.
 1. **[FRONTEND_GETTING_STARTED.md](FRONTEND_GETTING_STARTED.md):** setup, what to build, first milestone, common mistakes.
 2. **[FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md):** every call, with types, examples and errors.
 3. **[UI_GAMEPLAY_REQUIREMENTS.md](UI_GAMEPLAY_REQUIREMENTS.md):** scenes, sprites, HUD and gameplay UI requirements (MVP vs optional).

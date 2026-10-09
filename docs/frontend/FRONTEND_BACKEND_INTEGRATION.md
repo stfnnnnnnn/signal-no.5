@@ -34,7 +34,7 @@ A rejected command (`ok: false`) **never** changes state.
 ## 1. Submit survey responses · 2. Initialise a household  (sync)
 
 ```ts
-createGame(responses: SurveyResponses, opts: { seed: number; runId?: string })
+createGame(input: OnboardingInput | SurveyResponses, opts: { seed: number; runId?: string })   // OnboardingInput = CustomOnboarding | RandomOnboarding
   : { ok: true; engine: GameEngine; events: EngineEvent[] } | { ok: false; error: EngineError }
 ```
 
@@ -42,10 +42,11 @@ createGame(responses: SurveyResponses, opts: { seed: number; runId?: string })
 - **Field-by-field mapping:** [SURVEY_TO_GAMESTATE_MAPPING.md](../implementation/SURVEY_TO_GAMESTATE_MAPPING.md).
 
 ```ts
-const r = createGame({ schemaVersion: 1, q3Mode: 'fictional', q26Theme: 'modern' }, { seed: Date.now() % 2 ** 31 });
+// Preferred input is onboarding v2 (§17b); the legacy SurveyResponses shape is still accepted.
+const r = createGame({ schemaVersion: 1, mode: 'random', r1SizeRange: '3-4', r2PlayerAge: 'age36to59', r3OtherAgeGroups: ['surprise'] }, { seed: Date.now() % 2 ** 31 });
 if (!r.ok) {
   // r.error.code === 'INVALID_SURVEY'; show each issue next to its question
-  for (const i of r.error.issues ?? []) showFieldError(String(i.path[0]), i.message); // e.g. ['q2AgeGrid'] "age-group total 4 does not match household size 2"
+  for (const i of r.error.issues ?? []) showFieldError(String(i.path[0]), i.message); // e.g. ['q2ExactSize'] "must be between 3 and 4"
 } else {
   const engine = r.engine;   // r.events includes eventTriggered EV01 (the initial advisory is open)
 }
@@ -212,7 +213,7 @@ window.signal.badges.read(): Promise<string[]>
   - `categories[]`: weight, earned, included, objectives
   - `timeline[]`, `strengths[]`, `gaps[]`
   - `learningPoints[] { findingId, safetyRuleId, text }`, `checklistItems[] { id, text }`, `badgeIds[]`
-- Badge names, descriptions and hints: `BADGES` in `src/core/content/badges.ts`.
+- Badge names, descriptions, hints and icon IDs: `engine.getBadgeCatalog()` (from `BADGE_CATALOG` in `src/core/content/badges.ts`; 12 badges B01–B12). Achievements: `engine.getAchievementCatalog()`.
 - Finding texts: `FINDING_BY_ID` in `src/core/content/findings.ts`.
 
 ## 16. Save and load progress  (async)

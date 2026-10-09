@@ -18,9 +18,9 @@ The dev harness (`src/renderer/harness.ts`) shows a fictional household with but
 
 ## 2. What already works (consume it, don't rebuild it)
 
-- `createGame(survey, { seed })`: validates the 26-question survey and returns a running engine.
+- `createGame(onboarding, { seed })`: validates the onboarding answers (Q0 mode, then 8 custom questions or 4 random steps; `ONBOARDING_QUESTIONS` in `src/shared/contracts/onboarding.ts`) and returns a running engine. The legacy 26-question survey is still accepted but deprecated.
   - The first event (EV01, the advisory) is already open.
-  - Pass `{ schemaVersion: 1, q3Mode: 'fictional' }` for an instant fictional household.
+  - Pass a random-path answer such as `{ schemaVersion: 1, mode: 'random', r1SizeRange: '3-4', r2PlayerAge: 'age36to59', r3OtherAgeGroups: ['surprise'] }` for an instant household.
 - **Engine commands** (all synchronous):
   - `engine.getWorldConfig()`: theme, characters (sprite base, clothing variant, palette, visible NPC IDs), which interactables exist.
   - `engine.interact(id)`, `getAvailableActions(id)`, `executeAction(actionId)`: object and NPC interactions with costs, availability and reasons.
@@ -29,16 +29,16 @@ The dev harness (`src/renderer/harness.ts`) shows a fictional household with but
   - `engine.getShopCatalog()`, `purchase(id, qty)`: the shop.
 - **AI and evaluation:**
   - `buildScenarioRequest(state)` + `window.signal.ai.generateScenario(...)`: dialogue text (AI or fallback; always resolves).
-  - `evaluateRun(state)`: score, ending, category breakdown, badges, lessons, checklist. Then `window.signal.ai.narrateDebrief(...)`.
-- **Persistence:** `window.signal.save.*`, `badges.*`, `profile.*`.
+  - `engine.evaluate()` (same as `evaluateRun(state)`): score, ending, categories, 12 badge statuses, Handa breakdown, lessons, checklist. Then `window.signal.ai.narrateDebrief(...)` and `window.signal.achievements.recordRun(state)`.
+- **Persistence:** `window.signal.save.*`, `badges.*`, `achievements.*`, `profile.*`.
+- **Scene directives:** `engine.getSceneDirective()` (+ optional `window.signal.ai.suggestScene`) tells Phaser what weather, lighting, flood, props, NPC cues and audio to show.
 
 ## 3. What needs to be built
 
 Full requirements: [UI_GAMEPLAY_REQUIREMENTS.md](UI_GAMEPLAY_REQUIREMENTS.md).
 - **Setup screens:**
-  - React household survey (26 questions, conditional fields, validation messages from `error.issues`).
-  - Configuration review screen and character selection (Q25).
-  - Modern / Traditional Filipino theme selection (Q26).
+  - Q0 mode choice, then the custom (Q1–Q8, Q2b) or random (R1–R4) onboarding rendered from `ONBOARDING_QUESTIONS` (validation messages from `error.issues`).
+  - Customization (theme, player character, appearance, minimum-budget challenge) and a configuration review screen.
 - **House scene (Phaser):** fixed-layout tilemap, 16×16 tiles, 4-direction movement (90 px/s), collision, NPC sprites (Boy/Girl/Mom/Dad + clothing variants), interactable objects with 24 px proximity prompts.
 - **Panels:** dialogue with choices, inventory and go-bag, shop scene and purchase UI.
 - **HUD:** time, phase, speed 1×–32×, warning state, cash, phone battery.
@@ -63,8 +63,8 @@ You'll need to add React, Phaser and a Vite React plugin, and register the plugi
 
 ## 5. Developing with mock data
 
-- **Fictional households:** `createGame({ schemaVersion: 1, q3Mode: 'fictional' }, { seed: 42 })`. Same seed → same household and storm.
-- **Fixed survey fixtures:** `tests/fixtures/households.ts` has `familySurvey()` (4 people, assistance needed, pet, flood-prone, ₱800) and `aloneSurvey()` (1 adult, well prepared, ₱3,000). Import them into a dev page or story.
+- **Random households:** `createGame({ schemaVersion: 1, mode: 'random', r1SizeRange: '3-4', r2PlayerAge: 'age36to59', r3OtherAgeGroups: ['surprise'] }, { seed: 42 })`. Same answers + seed → same household and storm.
+- **Fixed onboarding fixtures:** `tests/fixtures/onboarding.ts` has `customFamily()`, `customSolo()`, `randomHousehold(overrides)` and `zeroAges()`. Import them into a dev page or story. (`tests/fixtures/households.ts` holds the deprecated 26-question fixtures.)
 - **Jump ahead:** drive the engine at 32× and auto-resolve events (see `playToEnd` / `resolveFirst` in `tests/helpers.ts`) to reach the evacuation, impact or debrief UI quickly.
 - **AI:** without a model, every dialogue is reviewed fallback text, which is good for layout work. Check `content.source` to show the "AI-personalized" label only when it's `'ai'`.
 
@@ -72,14 +72,16 @@ You'll need to add React, Phaser and a Vite React plugin, and register the plugi
 
 **Household setup → House scene → Object interaction → Backend action → Updated state → Dialogue display**
 
-1. Survey (or a "Fictional household" button) → `createGame` → keep the `engine` in one store.
+1. Onboarding (or a "Random household" button) → `createGame` → keep the `engine` in one store.
 2. Render `getWorldConfig()` into the house scene (theme, player sprite, visible NPCs, interactables).
 3. EV01 is open on start: build the request, `await window.signal.ai.generateScenario(req, runId)`, show the dialogue and `getEventChoices()`, then call `resolveEvent(choice)`.
 4. Walk to `KITCHEN_SINK`, press E → `engine.interact('KITCHEN_SINK')` → show `actions` → `executeAction('FILL_CONTAINERS')`.
 5. Re-render the HUD/inventory from `result.state`: water +15 L, clock +30 min.
 6. Call `engine.tick(dt)` every frame. The next milestone event arrives as `eventTriggered` in a tick result → dialogue again. For example, EV02 fires at hour 8 if the go-bag isn't ready, otherwise EV03/EV04 follow at hours 12/16.
 
-Done when this works with both a fictional household and `familySurvey()`, in fallback mode.
+Done when this works with both `randomHousehold()` and `customFamily()`, in fallback mode.
+
+The full, task-by-task plan is [FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md); the two-developer split is [FRONTEND_HANDOFF.md](FRONTEND_HANDOFF.md).
 
 ## 7. Common mistakes
 
