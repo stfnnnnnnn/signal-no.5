@@ -185,3 +185,5 @@ button.hud-btn { width: auto; padding: 1px 8px; font-size: .85rem; border-width:
 @media print { .row-actions, .hud, .toasts { display: none; } .panel { border: none; box-shadow: none; } body { background: #fff; color: #000; } }
 /* toasts sit bottom-left so they never cover side panels or the HUD */
 .toasts { top: auto; bottom: 16px; left: 16px; right: auto; }
+.bad-save { border: 2px solid var(--warn); padding: 8px; display: grid; gap: 6px; }
+.bad-save p { margin: 0; color: #ffd9c8; }

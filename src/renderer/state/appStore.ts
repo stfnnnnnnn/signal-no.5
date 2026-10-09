@@ -37,7 +37,12 @@ export class AppStore {
   }
 
   continueFrom(saved: unknown): StartResult {
-    return this.begin(() => store.load(saved));
+    return this.begin(() => {
+      const r = store.load(saved);
+      // Pauses owned by UI that no longer exists (panels, shop, window focus) must not survive a reload.
+      if (r.ok) for (const reason of ['menu', 'shop', 'focusLost'] as const) if (store.state?.clock.pauseReasons.includes(reason)) store.dispatch((e) => e.resume(reason));
+      return r;
+    });
   }
 
   subscribe(l: () => void) { this.listeners.add(l); return () => { this.listeners.delete(l); }; }
@@ -47,6 +52,7 @@ export class AppStore {
     if (!r.ok) return r;
     ui.reset();
     clearScenarioCache();
+    this.setup = null; // the next "New household" starts from blank answers and a new seed
     this.runKey++;
     this.go('game');
     return r;

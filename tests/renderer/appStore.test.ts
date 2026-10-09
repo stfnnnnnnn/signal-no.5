@@ -67,4 +67,21 @@ describe('AppStore', () => {
     expect(bad.ok).toBe(false);
     expect(app.screen).toBe('title');
   });
+
+  it('forgets the onboarding answers and seed once a run starts (New household is really new)', () => {
+    app.prepare('custom', { q3AgeCounts: { age0to4: 0, age5to12: 0, age13to17: 0, age18to35: 1, age36to59: 0, age60plus: 0 }, q6Surroundings: [] }, 7);
+    expect(app.setup).not.toBeNull();
+    app.startNew(sliceHousehold(), SLICE_SEED);
+    expect(app.setup).toBeNull();
+  });
+
+  it('a save taken while a panel or the shop was open resumes unpaused', () => {
+    app.startNew(sliceHousehold(), SLICE_SEED);
+    store.dispatch((e) => e.resolveEvent('DEFER'));
+    store.dispatch((e) => e.pause('menu')); store.dispatch((e) => e.pause('shop')); store.dispatch((e) => e.pause('focusLost'));
+    const saved = store.state!;
+    app.go('title');
+    expect(app.continueFrom(saved).ok).toBe(true);
+    expect(store.state!.clock.pauseReasons).toEqual([]);
+  });
 });

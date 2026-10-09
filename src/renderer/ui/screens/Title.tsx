@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getAiStatus, onAiStatus } from '../../services/ai';
-import { listSaves, readSave } from '../../services/persistence';
+import { listSaves, removeSave } from '../../services/persistence';
+import { continueSaved } from '../../services/continueGame';
 import { useApp } from '../../state/hooks';
 import { ui } from '../../state/uiStore';
 
@@ -14,11 +15,13 @@ export function Title() {
   useEffect(() => onAiStatus(setAi), []);
   useEffect(() => { let live = true; void listSaves().then((s) => { if (live) setHasSave(s.includes('auto')); }); return () => { live = false; }; }, []);
 
+  const [badSave, setBadSave] = useState(false);
   const resume = async () => {
-    const saved = await readSave('auto');
-    const r = saved ? app.continueFrom(saved) : { ok: false as const };
-    if (!r.ok) ui.toast({ kind: 'error', title: 'This save can’t be loaded.', body: 'Start a new game; the old save stays until you overwrite it.' });
+    const r = await continueSaved(app);
+    if (r === 'missing') { setHasSave(false); ui.toast({ kind: 'error', title: 'There is no saved game to continue.' }); }
+    if (r === 'invalid') setBadSave(true);
   };
+  const deleteSave = async () => { await removeSave('auto'); setBadSave(false); setHasSave(false); };
 
   return (
     <main className="title-screen">
@@ -34,7 +37,13 @@ export function Title() {
       </div>
       <nav className="title-menu" aria-label="Main menu">
         <button onClick={() => app.go('mode')} autoFocus>New game</button>
-        {hasSave && <button onClick={() => void resume()}>Continue</button>}
+        {hasSave && !badSave && <button onClick={() => void resume()}>Continue</button>}
+        {badSave && (
+          <div className="bad-save" role="alert">
+            <p>This save can’t be loaded. It may be from an older version or damaged.</p>
+            <button onClick={() => void deleteSave()}>Delete the save</button>
+          </div>
+        )}
         <button onClick={() => app.go('achievements')}>Achievements</button>
         <button onClick={() => app.go('settings')}>Settings</button>
         <button onClick={() => window.close()}>Exit</button>

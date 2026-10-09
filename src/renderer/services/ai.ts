@@ -64,6 +64,16 @@ export function narrateEvent(req: ScenarioAIRequest, runId: string, key: string,
 
 export function clearScenarioCache() { cache.clear(); }
 
+const narrations = new Map<string, Promise<DebriefNarration & { source: 'ai' | 'fallback' }>>();
+
+/** One narration per run: re-renders of the debrief never ask the model again or change the text. */
+export function narrateDebriefOnce(ev: DebriefEvaluation, state: GameState) {
+  let p = narrations.get(state.runId);
+  if (!p) { p = narrateDebriefSafe(ev, state); narrations.set(state.runId, p); }
+  return p;
+}
+export function resetNarrationMemo() { narrations.clear(); }
+
 /** Debrief narration (AI-worded, validated in main) or the reviewed fallback; never rejects. */
 export async function narrateDebriefSafe(ev: DebriefEvaluation, state: GameState): Promise<DebriefNarration & { source: 'ai' | 'fallback' }> {
   const ai = bridge()?.ai;

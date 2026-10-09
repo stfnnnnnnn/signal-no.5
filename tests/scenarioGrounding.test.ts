@@ -153,3 +153,26 @@ describe('fallback after a grounding rejection (real HTTP, fake model)', () => {
     expect(c.actionIds).toEqual(req.allowedActionIds);
   });
 });
+
+describe('no false positives on ordinary narration (review finding)', () => {
+  const hidden = atStart();
+  const revealed = withState(hidden, { landfallRevealed: true, hoursToLandfall: 24 });
+  const after = withState(hidden, { landfallRevealed: true, hoursToLandfall: -6 });
+  it.each([
+    ['supplies for days', hidden, 'Pack enough water for three days.'],
+    ['duration of rain', hidden, 'The rain has been falling for two hours now.'],
+    ['supplies for days, revealed', revealed, 'Pack enough water for three days.'],
+    ['time since landfall', after, 'It has been six hours since the storm hit.'],
+    ['hypothetical outage', hidden, 'Keep the flashlight close in case the power is cut tonight.'],
+    ['hypothetical flood', hidden, 'What if the house is flooded? Moving things up early helps.'],
+    ['surge education + praise', hidden, 'Storm surge is a danger for coastal towns, so it helps that you know the signs.'],
+    ['trapped education + praise', hidden, 'People who wait too long can get trapped, so we are glad you planned ahead.'],
+    ['rooftops of the street', hidden, 'Rain hammers the rooftops along the street.'],
+  ])('%s', (_name, req, text) => expect(verdict(req, text)).toBe('ok'));
+  it('debrief: positive, true statements about not being trapped pass', () => {
+    const e = game(); playToEnd(e);
+    const ev = evaluateRun(e.getState());
+    const req = buildDebriefRequest(ev, e.getState());
+    expect(validateDebriefNarration(ev, JSON.stringify({ summary: 'Because you left early, nobody was trapped by the flood.', highlightFindingIds: [] }), req.home).ok).toBe(true);
+  });
+});

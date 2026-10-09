@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DebriefNarration } from '../../../shared/contracts/debrief';
 import { ICON_URLS } from '../../game/assets';
-import { narrateDebriefSafe } from '../../services/ai';
+import { narrateDebriefOnce } from '../../services/ai';
 import { markPlanViewedOnce } from '../../services/persistence';
 import { finishRun } from '../../services/runEnd';
 import { store } from '../../state/engineStore';
@@ -13,7 +13,8 @@ const time = (m: number) => `Day ${Math.floor(m / 1440) + 1}, ${String(Math.floo
 
 export function Debrief() {
   const app = useApp();
-  const state = store.state;
+  // The finished run, captured once: later state churn (focus pause/resume) must not rebuild the debrief.
+  const [state] = useState(() => store.state);
   const ev = useMemo(() => (state ? store.engine.evaluate() : null), [state]);
   const [narration, setNarration] = useState<(DebriefNarration & { source: 'ai' | 'fallback' }) | null>(null);
   const [guide, setGuide] = useState(false);
@@ -23,7 +24,7 @@ export function Debrief() {
     if (!state || !ev) return;
     let live = true;
     void finishRun(state, ev);
-    void narrateDebriefSafe(ev, state).then((n) => { if (live) setNarration(n); });
+    void narrateDebriefOnce(ev, state).then((n) => { if (live) setNarration(n); });
     return () => { live = false; };
   }, [state, ev]);
   useEffect(() => { if (guide && state) void markPlanViewedOnce(state.runId); top.current?.focus(); }, [guide, state]);

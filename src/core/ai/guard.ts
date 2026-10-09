@@ -105,12 +105,12 @@ export interface ScenarioFacts {
 
 const sentencesOf = (text: string) => text.split(/(?<=[.!?])\s+/).filter(Boolean);
 /** The sentence is about this household or this place (as opposed to general education or somewhere else). */
-const HOUSEHOLD_REF = /\b(you|your|we|we're|us|our|ours|the house|the home|this house|home|here|the street|the yard|the first floor|the family|everyone)\b/i;
+const HOUSEHOLD_REF = /\b(our|your)\s+(house|home|street|yard|room|area|neighbou?rhood|family|floor|place)\b|\b(the|this)\s+(house|home|street|yard|first floor)\b|\bhere\b|\b(we|you)('re| are| were)\b|\bat home\b/i;
 const aboutHousehold = (sentence: string) => HOUSEHOLD_REF.test(sentence) && !ELSEWHERE.test(sentence.slice(0, sentence.search(HOUSEHOLD_REF) + 40));
 
 /** Parts no supported home has (every home is a single-, two- or multi-story house on the fixed floor plan). */
 const STRUCTURES: [RegExp, string][] = [
-  [/\bbasements?\b/gi, 'basement'], [/\b(attics?|lofts?)\b/gi, 'attic'], [/\broof ?tops?\b/gi, 'rooftop'],
+  [/\bbasements?\b/gi, 'basement'], [/\b(attics?|lofts?)\b/gi, 'attic'], [/\broof ?top\b/gi, 'rooftop'], // plural 'rooftops' = the neighbourhood
   [/\b(storm )?cellars?\b|\bbunkers?\b|\bsafe ?rooms?\b|\bpanic rooms?\b/gi, 'shelter-room'],
 ];
 export function checkStructure(text: string): string | null {
@@ -119,7 +119,11 @@ export function checkStructure(text: string): string | null {
 }
 
 const SURGE = /\bstorm surges?\b/i;
-const TRAPPED = /\b(trapped|stranded)\b/i;
+/** A direct statement that someone here IS trapped (not education, not 'nobody was trapped'). */
+const TRAPPED = /\b(we|you|everyone|they|the family|the household)('re| are| were| was| is| got|'ve been| have been)\s+(now\s+|still\s+)?(trapped|stranded)\b/i;
+/** Hypothetical or conditional wording before a claim makes it not a claim about now. */
+const HYPOTHETICAL = /\b(if|in case|what if|could|might|may|would|unless|before|whether)\b/i;
+const assertedNow = (s: string, re: RegExp) => { const m = re.exec(s); return !!m && !HYPOTHETICAL.test(s.slice(0, m.index)); };
 const FLOODED_NOW = [
   /\b(water|floodwaters?|flood ?water)s? (is|are|has|have) (already |now )?(inside|in the (house|home|living room|kitchen|bedroom)|entered|coming in(to)?|seeping in)\b/i,
   /\b(house|home|living room|kitchen|bedroom|floor|street|yard|room)s? (is|are) (already |now )?(flooded|flooding|under ?water)\b/i,
@@ -132,10 +136,10 @@ const AT_HOME = /\b(we('re| are)|you('re| are)|everyone('s| is)|the family is)( 
 export function checkHazards(text: string, f?: ScenarioFacts): string | null {
   for (const s of sentencesOf(text)) {
     if (SURGE.test(s) && aboutHousehold(s)) return 'hazard:storm-surge'; // the game has no storm surge
-    if (TRAPPED.test(s) && aboutHousehold(s)) return 'hazard:trapped';    // the game never traps the household
+    if (TRAPPED.test(s)) return 'hazard:trapped';                          // the game never traps the household
     if (!f) continue;
-    if (f.floodSeverity === 'none' && FLOODED_NOW.some((re) => re.test(s))) return 'hazard:flooding';
-    if (f.powerAvailable && POWER_OUT.test(s)) return 'hazard:power';
+    if (f.floodSeverity === 'none' && FLOODED_NOW.some((re) => assertedNow(s, re))) return 'hazard:flooding';
+    if (f.powerAvailable && assertedNow(s, POWER_OUT)) return 'hazard:power';
     if (f.location !== 'home' && AT_HOME.test(s)) return `location:${f.location}`;
   }
   return null;
@@ -143,7 +147,10 @@ export function checkHazards(text: string, f?: ScenarioFacts): string | null {
 
 const STORM_CONTEXT = /\b(typhoon|storm|landfall|rain|water|flood\w*|winds?|hits?|strikes?|arriv\w*|coming|comes|rises?|reach\w*)\b/i;
 const WORD_NUMBERS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, twelve: 12, 'twenty-four': 24, 'twenty four': 24, 'forty-eight': 48, 'forty eight': 48 };
-const COUNTDOWN = /\b(\d{1,3}|one|two|three|four|five|six|twelve|twenty[- ]four|forty[- ]eight)\s+(more\s+)?(hours?|hrs?|days?)\b/gi;
+const NUM = String.raw`(\d{1,3}|one|two|three|four|five|six|twelve|twenty[- ]four|forty[- ]eight)`;
+/** Only time anchored to the storm's arrival ('in 40 hours', '24 hours away'); not durations ('for 3 days', 'since', 'ago'). */
+const COUNTDOWN = new RegExp(String.raw`\b(?:in|within|about|around|roughly|nearly|under|next)\s+(?:the\s+next\s+|about\s+|around\s+)?` + NUM
+  + String.raw`\s+(?:more\s+)?(hours?|hrs?|days?)\b|\b` + NUM + String.raw`\s+(hours?|hrs?|days?)\s+(?:away|until|left|to go|from now)\b`, 'gi');
 const LANDFALL_HAPPENED = /\b(has|have|had) (already |now |just )?(made landfall|hit|struck|arrived)\b|\bis (now |already )?(hitting|making landfall)\b/i;
 
 /** No countdown while timing is hidden; once revealed it must match; landfall can't be narrated before it happens. */
@@ -153,9 +160,13 @@ export function checkTiming(text: string, f: ScenarioFacts): string | null {
     if (!STORM_CONTEXT.test(s)) continue;
     if (beforeLandfall && /\b(typhoon|storm)\b/i.test(s) && LANDFALL_HAPPENED.test(s)) return 'timing:future-phase';
     for (const m of s.matchAll(COUNTDOWN)) {
+      const after = s.slice(m.index! + m[0].length, m.index! + m[0].length + 12);
+      if (/\b(since|ago)\b/i.test(after)) continue;                    // elapsed time, not a countdown
       if (!f.landfallRevealed || f.hoursToLandfall === null) return 'timing:hidden';
-      const n = Number(m[1]) || WORD_NUMBERS[m[1]!.toLowerCase()] || 0;
-      const hours = /^day/i.test(m[3]!) ? n * 24 : n;
+      if (f.hoursToLandfall <= 0) continue;                             // after landfall there is no countdown to contradict
+      const word = (m[1] ?? m[3])!, unit = (m[2] ?? m[4])!;
+      const n = Number(word) || WORD_NUMBERS[word.toLowerCase()] || 0;
+      const hours = /^day/i.test(unit) ? n * 24 : n;
       if (Math.abs(hours - f.hoursToLandfall) > Math.max(3, f.hoursToLandfall * 0.15)) return 'timing:contradiction';
     }
   }

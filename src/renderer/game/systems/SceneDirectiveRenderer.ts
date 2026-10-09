@@ -76,9 +76,15 @@ export class SceneDirectiveRenderer {
     if (this.drips) { if (fx.has('WINDOW_DRIPS')) this.drips.start(); else this.drips.stop(); }
     this.mist.setAlpha(fx.has('MIST') ? 0.12 : 0);
     if (fx.has('DUST_MOTES') || fx.has('SUNBEAMS')) { this.motes.frequency = fx.has('SUNBEAMS') ? 120 : 400; this.motes.start(); } else this.motes.stop();
-    this.flicker?.remove(); this.flicker = null;
+    // Flicker darkens the shade's fill briefly; it never touches the object's alpha (which would multiply
+    // the darkness away and could leave the next lighting, e.g. an outage, too light).
+    this.flicker?.remove(); this.flicker = null; this.shade.setAlpha(1);
     if (fx.has('FLICKERING_LIGHTS') && look.electric) {
-      this.flicker = this.scene.tweens.add({ targets: this.shade, alpha: { from: look.alpha, to: Math.min(0.85, look.alpha + 0.2) }, duration: 120, yoyo: true, repeat: -1, repeatDelay: 900 });
+      const dim = { a: look.alpha };
+      this.flicker = this.scene.tweens.add({
+        targets: dim, a: Math.min(0.85, look.alpha + 0.2), duration: 120, yoyo: true, repeat: -1, repeatDelay: 900,
+        onUpdate: () => this.shade.setFillStyle(look.color, dim.a),
+      });
     }
     this.setDebris(fx.has('DEBRIS_AFTERMATH'));
     for (const e of addedEffects(prev, d)) if (e === 'LIGHTNING_FLASH') { this.scene.cameras.main.flash(160, 230, 240, 255); audio.oneShot('sfx_thunder'); }
