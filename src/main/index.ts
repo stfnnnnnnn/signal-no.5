@@ -7,6 +7,7 @@ import { IPC } from '../shared/bridge';
 import { AIService } from './ai/aiService';
 import { resolveRuntimeConfig, RUNTIME_LABEL } from './config';
 import { registerIpc } from './ipc';
+import { onceShutdown, sendToWindow } from './lifecycle';
 import { LlmServerManager } from './llm/serverManager';
 import { SaveStore } from './persistence/saveStore';
 
@@ -18,7 +19,7 @@ let quitting = false;
 
 function setAiStatus(s: AiStatus) {
   aiStatus = s;
-  win?.webContents.send(IPC.aiStatusChanged, s);
+  sendToWindow(win, IPC.aiStatusChanged, s); // the window may already be closed (shutdown, close during startup)
 }
 
 if (!app.requestSingleInstanceLock()) app.quit(); // never run two model servers
@@ -39,6 +40,7 @@ async function createWindow() {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e, url) => { if (!devUrl || !url.startsWith(devUrl)) e.preventDefault(); });
   win.once('ready-to-show', () => win?.show());
+  win.on('closed', () => { win = null; });
   if (devUrl) await win.loadURL(devUrl);
   else await win.loadFile(path.join(here, '../renderer/index.html'));
 }
@@ -113,12 +115,13 @@ async function runSelfTest(ai: AIService, store: SaveStore, startup: Record<stri
   app.quit();
 }
 
-app.on('before-quit', async (e) => {
+const shutdownServer = onceShutdown(async () => { await server?.stop(); setAiStatus('stopped'); });
+
+// Stop the model server first, then let the quit continue. `finally` guarantees the app exits even if stopping fails.
+app.on('before-quit', (e) => {
   if (quitting || !server) return;
   e.preventDefault();
   quitting = true;
-  await server.stop();
-  setAiStatus('stopped');
-  app.quit();
+  void shutdownServer().finally(() => app.quit());
 });
 app.on('window-all-closed', () => app.quit());
