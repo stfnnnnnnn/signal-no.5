@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { DebriefNarrationRequest } from '../../shared/contracts/ai';
 import { DebriefNarration, type DebriefEvaluation } from '../../shared/contracts/debrief';
 import type { GameState } from '../../shared/contracts/state';
-import { BADGES } from '../content/badges';
+import { BADGE_META } from '../content/badges';
 import { FINDING_BY_ID } from '../content/findings';
 import { checkNarration } from './guard';
 
@@ -14,7 +14,7 @@ export function buildDebriefRequest(ev: DebriefEvaluation, s: GameState): Debrie
     schemaVersion: 1, score: ev.score, ending: ENDING_LABEL[ev.ending],
     strengths: ev.strengths.map((id) => ({ id, text: FINDING_BY_ID.get(id)!.strength })),
     gaps: ev.gaps.map((id) => ({ id, text: FINDING_BY_ID.get(id)!.lesson })),
-    badges: ev.badgeIds.map((id) => BADGES.find((b) => b.id === id)!.name),
+    badges: ev.badgeIds.map((id) => BADGE_META.get(id)!.name),
     householdSize: s.household.size,
   };
 }

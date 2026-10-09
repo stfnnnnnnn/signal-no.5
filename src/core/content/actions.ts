@@ -26,6 +26,11 @@ export interface ActionDef {
   safetyRuleId?: string;
   /** Deliberately unsafe choice offered for learning; never rewarded (debrief explains). */
   unsafe?: boolean;
+  /**
+   * discovery: reveals information, 0 game minutes, never pauses the clock; preparation: changes resources/flags
+   * at a fixed cost; conversation: short contextual talk. Default preparation.
+   */
+  kind?: 'discovery' | 'preparation' | 'conversation';
 }
 
 const flag = (s: GameState, f: FlagId) => s.flags[f] === true;
@@ -147,10 +152,21 @@ export const ACTIONS: ActionDef[] = [
   { id: 'PREPARE_COMMUNICATION', label: 'Set a communication plan', scope: 'world', interactables: ['LIVING_PHONE'], timeCostMinutes: 30,
     requires: [not('COMMUNICATION_PLAN_READY', 'A communication plan is already set.')],
     effect: ({ s }) => set(s, 'COMMUNICATION_PLAN_READY', 'MEETING_POINT_KNOWN'), objectiveIds: ['O_COMMUNICATION'], safetyRuleId: 'SR_COMMUNICATION' },
-  { id: 'INSPECT_SUPPLIES', label: 'Inspect supplies', scope: 'both', interactables: ['KITCHEN_CABINET', 'UTILITY_SHELF'], timeCostMinutes: 5,
+  { id: 'INSPECT_SUPPLIES', label: 'Inspect supplies', scope: 'both', interactables: ['KITCHEN_CABINET', 'UTILITY_SHELF', 'KITCHEN_SINK'], timeCostMinutes: 0, kind: 'discovery',
     requires: [], effect: ({ s }) => bump(s, 'suppliesInspected') },
-  { id: 'INSPECT_GO_BAG', label: 'Inspect the go-bag', scope: 'both', interactables: ['ENTRANCE_BAG'], timeCostMinutes: 5,
+  { id: 'INSPECT_GO_BAG', label: 'Inspect the go-bag', scope: 'both', interactables: ['ENTRANCE_BAG'], timeCostMinutes: 0, kind: 'discovery',
     requires: [], effect: ({ s }) => bump(s, 'goBagInspected') },
+  { id: 'CHECK_ESSENTIAL_SUPPLIES', label: 'Check the medicine cabinet', scope: 'both', interactables: ['BEDROOM_MEDICATION'], timeCostMinutes: 0, kind: 'discovery',
+    applicable: ({ p }) => p.medical.essentialMedication !== 'no' || sel.hasMedicalEquipment(p), requires: [],
+    effect: ({ s }) => set(s, 'MEDICAL_SUPPLIES_CHECKED'), objectiveIds: ['O_MEDICAL_CHECK'], safetyRuleId: 'SR_MEDICATION_CONTINUITY' },
+  { id: 'CHARGE_POWER_BANK', label: 'Charge the power bank', scope: 'world', interactables: ['LIVING_PHONE'], timeCostMinutes: 60,
+    requires: [power, needItem('POWER_BANK', 'You have no power bank (available at the shop).'), not('POWER_BANK_CHARGED', 'The power bank is already charged.')],
+    effect: ({ s }) => set(s, 'POWER_BANK_CHARGED') },
+  { id: 'TALK_TO_NENA', label: 'Check on Aling Nena', scope: 'world', interactables: ['NPC_ALING_NENA'], timeCostMinutes: 5, kind: 'conversation',
+    requires: [atScene('HOUSE')], effect: ({ s }) => set(s, 'NENA_MET') },
+  { id: 'HELP_NENA_PREPARE', label: 'Help Aling Nena pack and register for official assistance', scope: 'both', interactables: ['NPC_ALING_NENA'], timeCostMinutes: 45, maxUses: 1,
+    requires: [atScene('HOUSE'), outdoorSafe, preLandfall, { test: ({ s }) => !s.environment.evacuationAdvisoryIssued, reason: 'Follow the evacuation advisory now; officials are assisting neighbours.' }],
+    effect: ({ s }) => { set(s, 'NENA_MET', 'NENA_HELPED'); s.counters.nenaHelpedAt = s.clock.gameMinutes; }, safetyRuleId: 'SR_HELP_NEIGHBOURS_SAFELY' },
   { id: 'FOLLOW_EVACUATION', label: 'Leave for the evacuation destination', scope: 'both', interactables: ['ENTRANCE_DOOR'], timeCostMinutes: 0,
     requires: evacuationOpen, effect: ({ s, p }) => {
       s.evacuation.decision = 'comply';

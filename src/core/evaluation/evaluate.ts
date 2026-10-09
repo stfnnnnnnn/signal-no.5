@@ -1,11 +1,14 @@
-// Deterministic preparedness evaluation (GD §14–15): score, ending, findings, checklist, badges.
-import type { DebriefEvaluation } from '../../shared/contracts/debrief';
+// Deterministic preparedness evaluation (GD §14 + revised badges): score, ending, findings, checklist,
+// badges (B01 Handa via evaluateHanda) and lesson cards. No AI input.
+import type { BadgeResult, DebriefEvaluation } from '../../shared/contracts/debrief';
 import type { GameState } from '../../shared/contracts/state';
 import { ACTION_BY_ID } from '../content/actions';
-import { BADGES, type BadgeContext } from '../content/badges';
 import { FINDING_BY_ID } from '../content/findings';
+import { evaluateBadges } from './badges';
+import { evaluateHanda } from './handa';
 import { CATEGORY_WEIGHTS, OBJECTIVES } from './objectives';
 
+/** Score-based endings (independent of the Handa badge). */
 export const ENDING_THRESHOLDS = { handa: 85, nakaraos: 60 } as const;
 
 export function evaluateRun(s: GameState): DebriefEvaluation {
@@ -34,16 +37,16 @@ export function evaluateRun(s: GameState): DebriefEvaluation {
   const learningPoints = gaps.map((id) => { const d = FINDING_BY_ID.get(id)!; return { findingId: id, safetyRuleId: d.safetyRuleId, text: d.lesson }; });
   const checklistItems = gaps.map((id) => ({ id: `C_${id.slice(2)}`, text: FINDING_BY_ID.get(id)!.checklist }));
 
-  const ctx: BadgeContext = {
-    state: s,
-    met: (id) => results.get(id) ?? null,
-    categoryRatio: (k) => { const c = categories.find((x) => x.category === k)!; return c.included ? c.earned / c.weight : null; },
-  };
-  const badgeIds = BADGES.filter((b) => b.earned(ctx)).map((b) => b.id);
+  const handa = evaluateHanda(s);
+  const b01: BadgeResult = !s.completed ? { id: 'B01', status: 'eligible', reasons: [] } : { id: 'B01', status: handa.earned ? 'earned' : 'notEarned', reasons: handa.reasons };
+  const badges = [b01, ...evaluateBadges(s)];
 
   return {
     schemaVersion: 2, score, ending, rescueOutcome: s.evacuation.rescueOutcome, categories,
     timeline: s.decisionLog.map((d) => ({ seq: d.seq, atMinute: d.tick, eventId: d.eventId, actionId: d.actionId, label: ACTION_BY_ID.get(d.actionId)?.label ?? d.actionId })),
-    strengths, gaps, learningPoints, checklistItems, badgeIds,
+    strengths, gaps, learningPoints, checklistItems,
+    badgeIds: badges.filter((b) => b.status === 'earned').map((b) => b.id),
+    badges, handa,
+    lessonIds: [...strengths, ...gaps].filter((id, i, a) => a.indexOf(id) === i),
   };
 }

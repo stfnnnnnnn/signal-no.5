@@ -70,7 +70,7 @@ export function milestones(s: GameState): Milestone[] {
   const advisoryAt = L - (8 + (st.advisoryLeadHours ?? 0)) * H;
   if (st.evacuationAdvisoryEvent) list.push({ id: 'EVAC_ADVISORY', minute: advisoryAt, eventId: 'EV08', critical: true,
     apply: (x) => { recordDeadlineSnapshot(x); x.environment.evacuationAdvisoryIssued = true; } });
-  list.push({ id: 'HEAVY_RAIN', minute: L - 8 * H, apply: (x) => { if (!x.storm.evacuationAdvisoryEvent) recordDeadlineSnapshot(x); x.environment.weatherState = 'heavyRain'; } });
+  list.push({ id: 'HEAVY_RAIN', minute: L - 8 * H, apply: (x) => { if (!x.storm.evacuationAdvisoryEvent) recordDeadlineSnapshot(x); recordHeavyRainSnapshot(x); x.environment.weatherState = 'heavyRain'; } });
   const ep = EXPOSURE_PROFILES[st.exposure ?? 'unknown'];
   const peakRank = SEVERITY.indexOf(st.peakFloodSeverity);
   if (st.floodOnsetHoursBeforeLandfall > 0 && peakRank >= 1) list.push({ id: 'FLOOD_ONSET', minute: L - st.floodOnsetHoursBeforeLandfall * H,
@@ -119,6 +119,14 @@ function recordDeadlineSnapshot(s: GameState) {
   s.counters.pd_roof = s.flags.ROOF_SECURED ? 1 : 0;
 }
 
+/** Prepared stores and pre-storm work when dangerous weather begins (before tap water is cut at the peak). */
+function recordHeavyRainSnapshot(s: GameState) {
+  s.counters.hr_water = sel.itemTotal(s, 'WATER');
+  s.counters.hr_food = sel.itemTotal(s, 'FOOD');
+  s.counters.hr_windows = s.counters.windowsBoarded ?? 0;
+  s.counters.hr_roof = s.flags.ROOF_SECURED ? 1 : 0;
+}
+
 /** What the household actually has when the storm arrives (evacuees only have their go-bag). Used by scoring. */
 function recordLandfallSnapshot(s: GameState) {
   const left = s.evacuation.departedAtMinute !== null;
@@ -129,6 +137,9 @@ function recordLandfallSnapshot(s: GameState) {
   s.counters.lf_powerBank = have('POWER_BANK') > 0 ? 1 : 0;
   s.counters.lf_goBagReady = sel.goBagStatus(s) === 'ready' ? 1 : 0;
   s.counters.lf_documentsSafe = s.flags.DOCUMENTS_PROTECTED || (s.goBag.DOCUMENTS ?? 0) > 0 ? 1 : 0;
+  s.counters.lf_phone = s.phoneBattery;
+  s.counters.lf_powerBankCharged = have('POWER_BANK') > 0 && s.flags.POWER_BANK_CHARGED ? 1 : 0;
+  s.counters.lf_medPacked = s.flags.MEDICATION_PACKED ? 1 : 0;
 }
 
 function applyPeak(s: GameState) {

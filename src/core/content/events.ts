@@ -136,14 +136,14 @@ export const EVENTS: EventDef[] = [
   { id: 'EV12', title: 'Household dilemma', mandatory: true, eligible: () => true,
     variant: ({ s, p }) => (sel.assistanceNeeded(p) && !s.flags.ASSISTANCE_ARRANGED ? 'EV12__ASSISTANCE' : sel.usesPoweredEquipment(p) ? 'EV12__POWERED_EQUIPMENT'
       : sel.hasPets(p) && !s.flags.PET_SUPPLIES_READY ? 'EV12__PET' : sel.hasInfants(p) && !s.flags.CHILD_SUPPLIES_READY ? 'EV12__CHILD' : 'EV12__NEIGHBOR'),
-    choices: (_c, v) => (v === 'EV12__NEIGHBOR' ? ['CHECK_HOUSEHOLD_NEEDS', 'DEFER'] : ['HELP_WITH_NEED', 'REVIEW_NEEDS', 'DEFER']),
+    choices: (_c, v) => (v === 'EV12__NEIGHBOR' ? ['HELP_NENA_PREPARE', 'CHECK_HOUSEHOLD_NEEDS', 'DEFER'] : ['HELP_WITH_NEED', 'REVIEW_NEEDS', 'DEFER']),
     speaker: householdSpeaker,
     fallback: {
       EV12__ASSISTANCE: { dialogue: 'If we have to leave, who will help the person who needs assistance?', description: 'The household looks at each other, thinking.' },
       EV12__POWERED_EQUIPMENT: { dialogue: 'What do we do about the equipment if the power stays out for a long time?', description: 'The household looks at each other, thinking.' },
       EV12__PET: { dialogue: 'What about our pet? We have not packed anything for them.', description: 'The pet watches from the corner.' },
       EV12__CHILD: { dialogue: 'Do we have what the little one needs if we have to leave?', description: 'The household looks at each other, thinking.' },
-      EV12__NEIGHBOR: { dialogue: 'The neighbors are asking if everyone on the street is ready.', description: 'A neighbor waves from across the fence.' },
+      EV12__NEIGHBOR: { dialogue: 'Aling Nena next door lives alone. She is asking if someone can help her get ready.', description: 'Aling Nena waves from across the fence.' },
     },
     facts: () => ['The household is discussing a need specific to its members.'] },
   { id: 'EV13', title: 'Household status', mandatory: true, eligible: () => true,

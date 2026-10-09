@@ -1,34 +1,34 @@
-// Badges B01–B10 (GD §15). Deterministic; unlocked from evaluated objectives, never by the AI.
+// Badge catalog B01–B12 (display metadata). Supersedes GD §15 B01–B10 (see SPEC_RECONCILIATION R17).
+// Unlock rules live in src/core/evaluation/badges.ts (B01 Handa: src/core/evaluation/handa.ts).
 import type { BadgeId } from '../../shared/contracts/ids';
-import type { GameState } from '../../shared/contracts/state';
 
-export interface BadgeContext {
-  state: GameState;
-  met: (objectiveId: string) => boolean | null; // null = not applicable
-  categoryRatio: (category: string) => number | null; // earned / weight, null = excluded
-}
+export interface BadgeMeta { id: BadgeId; name: string; competency: string; description: string; hint: string; iconAssetId: string }
 
-export interface BadgeDef { id: BadgeId; name: string; description: string; hint: string; earned: (c: BadgeContext) => boolean }
-
-const yes = (v: boolean | null) => v === true;
-const okOrNa = (v: boolean | null) => v !== false;
-const happened = (s: GameState, id: string) => s.eventHistory.some((h) => h.eventId === id);
-
-export const BADGES: BadgeDef[] = [
-  { id: 'B01', name: 'Handa ang Bag!', description: 'Completed the go-bag before the storm.', hint: 'Pack every essential the household needs.', earned: (c) => yes(c.met('O_GO_BAG')) },
-  { id: 'B02', name: 'Tubig at Pagkain', description: 'Had enough water and food for the household.', hint: 'Store water and food for everyone.', earned: (c) => yes(c.met('O_WATER')) && yes(c.met('O_FOOD')) },
-  { id: 'B03', name: 'Balitang Beripikado', description: 'Relied on verified information.', hint: 'Check official sources and verify messages before sharing.',
-    earned: (c) => (happened(c.state, 'EV07') ? yes(c.met('O_RUMOR')) : yes(c.met('O_BULLETIN')) && okOrNa(c.met('O_UPDATE'))) },
-  { id: 'B04', name: 'Pamilyang Handa', description: 'Coordinated the whole household.', hint: 'Agree on a plan and roles with everyone.',
-    earned: (c) => okOrNa(c.met('O_FAMILY_MEETING')) && yes(c.met('O_COMMUNICATION')) && yes(c.met('O_ACCOUNTED')) },
-  { id: 'B05', name: 'Ligtas na Dokumento', description: 'Protected important documents.', hint: 'Waterproof your documents or pack them.', earned: (c) => yes(c.met('O_DOCUMENTS')) },
-  { id: 'B06', name: 'May Plano Tayo', description: 'Set a communication plan.', hint: 'Agree on contacts and a meeting point.', earned: (c) => yes(c.met('O_COMMUNICATION')) },
-  { id: 'B07', name: 'Walang Maiiwan', description: 'Accounted for every household member.', hint: 'Check on everyone after the storm.', earned: (c) => yes(c.met('O_ACCOUNTED')) },
-  { id: 'B08', name: 'Handa sa Dilim', description: 'Prepared and used backup lighting.', hint: 'Keep a flashlight or power bank ready.',
-    earned: (c) => yes(c.met('O_LIGHTING')) && (!happened(c.state, 'EV09') || c.state.flags.BACKUP_LIGHTING_USED === true) },
-  { id: 'B09', name: 'Tamang Desisyon', description: 'Responded appropriately to official guidance.', hint: 'Follow advisories in time and stay safe during the storm.',
-    earned: (c) => okOrNa(c.met('O_ADVISORY_RESPONSE')) && okOrNa(c.met('O_HAZARD_RESPONSE')) && yes(c.met('O_NO_UNSAFE')) && (c.met('O_ADVISORY_RESPONSE') !== null || c.met('O_HAZARD_RESPONSE') !== null) },
-  { id: 'B10', name: 'Signal No. 5 Master', description: 'Demonstrated every applicable core competency.', hint: 'Score at least 75% in every applicable competency.',
-    earned: (c) => ['emergencySupplies', 'officialInformation', 'householdCoordination', 'evacuationPreparedness', 'householdNeeds', 'hazardAwareness']
-      .every((k) => { const r = c.categoryRatio(k); return r === null || r >= 0.75; }) && yes(c.met('O_NO_UNSAFE')) },
+export const BADGE_CATALOG: BadgeMeta[] = [
+  { id: 'B01', name: 'Handa', competency: 'Comprehensive household preparedness and responsible typhoon decisions', iconAssetId: 'badge_b01_handa',
+    description: 'Finished the typhoon with at least 85% wellbeing and every applicable critical preparedness requirement met.', hint: 'Prepare every critical need, follow official advice, keep everyone accounted for and stay safe.' },
+  { id: 'B02', name: 'Go-Bag Ready', competency: 'Emergency kit', iconAssetId: 'badge_b02_go_bag_ready',
+    description: 'Packed every applicable go-bag category before the preparation deadline.', hint: 'Pack the go-bag before the evacuation advisory (or heavy rain).' },
+  { id: 'B03', name: 'Tubig Muna', competency: 'Drinking water', iconAssetId: 'badge_b03_tubig_muna',
+    description: 'Stored three days of drinking water for the whole household before the water supply was interrupted.', hint: 'Store 12 L per household member early.' },
+  { id: 'B04', name: 'Botika Run', competency: 'Essential medication and supplies', iconAssetId: 'badge_b04_botika_run',
+    description: 'Prepared the essential medication or supplies the household needs before the storm, without over-buying.', hint: 'Check the medicine cabinet, get one refill if needed, and pack it.' },
+  { id: 'B05', name: 'Fact Checker', competency: 'Verified information', iconAssetId: 'badge_b05_fact_checker',
+    description: 'Verified a rumour with an official source before acting on or sharing it.', hint: 'Verify unconfirmed messages; never forward them.' },
+  { id: 'B06', name: 'Bayanihan', competency: 'Helping neighbours safely', iconAssetId: 'badge_b06_bayanihan',
+    description: 'Helped Aling Nena get ready and register for official assistance before the advisory.', hint: 'Visit Aling Nena early, while it is still safe outside.' },
+  { id: 'B07', name: 'Maagang Lumikas', competency: 'Timely evacuation', iconAssetId: 'badge_b07_maagang_lumikas',
+    description: 'Followed the evacuation advisory and left before the route became unsafe.', hint: 'When an advisory is issued, leave early with your go-bag.' },
+  { id: 'B08', name: 'Walang Maiiwan', competency: 'Household accountability', iconAssetId: 'badge_b08_walang_maiiwan',
+    description: 'Accounted for everyone, arranged needed assistance, prepared for pets, and evacuated together when advised.', hint: 'Arrange help early and check on every household member.' },
+  { id: 'B09', name: 'Bintana Boss', competency: 'Window protection', iconAssetId: 'badge_b09_bintana_boss',
+    description: 'Protected the applicable windows before dangerous weather began.', hint: 'Get tools and prepare windows before heavy rain.' },
+  { id: 'B10', name: 'Bubong Secured', competency: 'Safe roof preparation', iconAssetId: 'badge_b10_bubong_secured',
+    description: 'Completed safe roof preparation before dangerous winds began.', hint: 'Arrange roof preparation early; never on the roof in a storm.' },
+  { id: 'B11', name: 'Family Plan', competency: 'Household plan', iconAssetId: 'badge_b11_family_plan',
+    description: 'Set a meeting point, identified the evacuation center, and coordinated the household.', hint: 'Agree on a meeting point and find out where to evacuate.' },
+  { id: 'B12', name: 'Powered Up', competency: 'Communication and lighting', iconAssetId: 'badge_b12_powered_up',
+    description: 'Reached landfall with working light and a charged phone or charged power bank.', hint: 'Charge the phone and power bank and keep a light ready.' },
 ];
+
+export const BADGE_META: ReadonlyMap<string, BadgeMeta> = new Map(BADGE_CATALOG.map((b) => [b.id, b]));

@@ -23,8 +23,10 @@ export const INTERACTABLES: InteractableDef[] = [
   { id: 'KITCHEN_SINK', scene: 'HOUSE', area: 'kitchen', label: 'Sink' },
   { id: 'BEDROOM_CLOTHES', scene: 'HOUSE', area: 'bedroom', label: 'Clothes cabinet' },
   { id: 'BEDROOM_DOCUMENTS', scene: 'HOUSE', area: 'bedroom', label: 'Documents drawer' },
-  { id: 'BEDROOM_MEDICATION', scene: 'HOUSE', area: 'bedroom', label: 'Medication container',
-    present: (p) => sel.needsEssentialMedication(p) || sel.hasMedicalEquipment(p) },
+  { id: 'BEDROOM_MEDICATION', scene: 'HOUSE', area: 'bedroom', label: 'Medicine cabinet',
+    // Also present when the answer was unknown/undisclosed: never assume medication is unnecessary.
+    present: (p) => p.medical.essentialMedication !== 'no' || sel.hasMedicalEquipment(p) },
+  { id: 'NPC_ALING_NENA', scene: 'HOUSE', area: 'entrance', label: 'Aling Nena (neighbour)' },
   { id: 'UTILITY_TOOLS', scene: 'HOUSE', area: 'utility', label: 'Toolbox' },
   { id: 'UTILITY_SHELF', scene: 'HOUSE', area: 'utility', label: 'Supply shelf' },
   { id: 'UTILITY_DRUM', scene: 'HOUSE', area: 'utility', label: 'Water drum' },

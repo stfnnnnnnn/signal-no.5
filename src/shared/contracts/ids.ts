@@ -45,6 +45,7 @@ export const FLAG_IDS = [
   'MEMBERS_ACCOUNTED', 'POST_STORM_UPDATES_CHECKED', 'BARANGAY_VISITED', 'ADVISORY_REVIEWED',
   'PREPARED_TO_EVACUATE', 'UNSAFE_ACTION_ATTEMPTED', 'BOUGHT_AFTER_PRICE_INCREASE', 'GO_BAG_BROUGHT',
   'RESOURCES_REVIEWED', 'RECOVERY_PLANNED', 'REFLECTION_DONE', 'BACKUP_LIGHTING_USED',
+  'MEDICAL_SUPPLIES_CHECKED', 'POWER_BANK_CHARGED', 'NENA_MET', 'NENA_HELPED',
 ] as const;
 export const FlagId = z.enum(FLAG_IDS);
 export type FlagId = z.infer<typeof FlagId>;
@@ -53,7 +54,8 @@ export const EVENT_IDS = ['EV01', 'EV02', 'EV03', 'EV04', 'EV05', 'EV06', 'EV07'
 export const EventId = z.enum(EVENT_IDS);
 export type EventId = z.infer<typeof EventId>;
 
-export const BADGE_IDS = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10'] as const;
+/** Revised 12-badge catalog (supersedes GD §15 B01–B10; see SPEC_RECONCILIATION R17). */
+export const BADGE_IDS = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12'] as const;
 export const BadgeId = z.enum(BADGE_IDS);
 export type BadgeId = z.infer<typeof BadgeId>;
 

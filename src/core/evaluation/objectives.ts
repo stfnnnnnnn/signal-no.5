@@ -25,8 +25,9 @@ const always = () => true;
 const c = (s: GameState, k: string) => s.counters[k] ?? 0;
 
 export const OBJECTIVES: Objective[] = [
-  { id: 'O_WATER', category: 'emergencySupplies', applicable: always, met: (s) => c(s, 'lf_water') >= sel.waterRequirement(s.household), findingId: 'F_WATER' },
-  { id: 'O_FOOD', category: 'emergencySupplies', applicable: always, met: (s) => c(s, 'lf_food') >= sel.foodRequirement(s.household), findingId: 'F_FOOD' },
+  // Water/food are judged as PREPARED stores when dangerous weather begins (evacuees carry only part of them).
+  { id: 'O_WATER', category: 'emergencySupplies', applicable: always, met: (s) => c(s, 'hr_water') >= sel.waterRequirement(s.household), findingId: 'F_WATER' },
+  { id: 'O_FOOD', category: 'emergencySupplies', applicable: always, met: (s) => c(s, 'hr_food') >= sel.foodRequirement(s.household), findingId: 'F_FOOD' },
   { id: 'O_GO_BAG', category: 'emergencySupplies', applicable: always, met: (s) => c(s, 'lf_goBagReady') === 1, findingId: 'F_GO_BAG' },
   { id: 'O_LIGHTING', category: 'emergencySupplies', applicable: always, met: (s) => c(s, 'lf_lighting') === 1, findingId: 'F_LIGHTING' },
 
@@ -46,6 +47,9 @@ export const OBJECTIVES: Objective[] = [
 
   { id: 'O_MEDICATION', category: 'householdNeeds', applicable: (s) => sel.needsEssentialMedication(s.household) || sel.hasMedicalEquipment(s.household),
     met: (s) => f(s, 'MEDICATION_PACKED') || f(s, 'MEDICAL_CONTINUITY_PLANNED'), findingId: 'F_MEDICATION' },
+  // Privacy-preserving: when the answer was unknown/undisclosed, checking the cabinet counts; packing is not required.
+  { id: 'O_MEDICAL_CHECK', category: 'householdNeeds', applicable: (s) => s.household.medical.essentialMedication === 'unknown' || s.household.medical.essentialMedication === 'undisclosed',
+    met: (s) => f(s, 'MEDICAL_SUPPLIES_CHECKED'), findingId: 'F_MEDICAL_CHECK' },
   { id: 'O_ASSISTANCE', category: 'householdNeeds', applicable: (s) => sel.assistanceNeeded(s.household), met: (s) => f(s, 'ASSISTANCE_ARRANGED'), findingId: 'F_ASSISTANCE' },
   { id: 'O_PETS', category: 'householdNeeds', applicable: (s) => sel.hasPets(s.household), met: (s) => f(s, 'PET_SUPPLIES_READY'), findingId: 'F_PETS' },
   { id: 'O_CHILD', category: 'householdNeeds', applicable: (s) => sel.hasInfants(s.household), met: (s) => f(s, 'CHILD_SUPPLIES_READY'), findingId: 'F_CHILD' },

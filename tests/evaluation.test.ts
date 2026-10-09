@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateRun } from '../src/core/evaluation/evaluate';
-import { BADGES } from '../src/core/content/badges';
+import { BADGE_CATALOG } from '../src/core/content/badges';
 import { DebriefEvaluation } from '../src/shared/contracts/debrief';
 import type { GameState } from '../src/shared/contracts/state';
 import { aloneSurvey, familySurvey } from './fixtures/households';
@@ -15,7 +15,7 @@ const CARELESS = ['DEFER', 'IGNORE_RUMOR', 'FORWARD_RUMOR', 'DELAY_EVACUATION', 
 function prepared(s = aloneSurvey()): GameState {
   const e = newGame(s);
   e.resolveEvent('CHECK_ADVISORY');
-  for (const a of ['PREPARE_COMMUNICATION', 'PROTECT_DOCUMENTS', 'FILL_CONTAINERS', 'FILL_CONTAINERS', 'SECURE_OBJECTS', 'PACK_GO_BAG']) e.executeAction(a);
+  for (const a of ['PREPARE_COMMUNICATION', 'PROTECT_DOCUMENTS', 'FILL_CONTAINERS', 'FILL_CONTAINERS', 'SECURE_OBJECTS', 'PACK_GO_BAG', 'CHECK_ESSENTIAL_SUPPLIES']) e.executeAction(a);
   return playToEnd(e, GOOD);
 }
 const careless = (s = aloneSurvey()) => playToEnd(newGame(s), CARELESS);
@@ -51,7 +51,7 @@ describe('preparedness evaluation', () => {
     expect(needs.objectives).toHaveLength(0);
   });
 
-  it('does not penalise undisclosed medical information', () => {
+  it('does not penalise undisclosed medical information when the privacy-preserving check is done', () => {
     const s = aloneSurvey(); s.q12MedicalCondition = 'preferNotToSay'; s.q14EssentialMedication = 'preferNotToSay';
     const a = evaluateRun(prepared(aloneSurvey()));
     const b = evaluateRun(prepared(s));
@@ -86,14 +86,14 @@ describe('preparedness evaluation', () => {
 });
 
 describe('badges', () => {
-  it('defines the ten GD badges B01–B10', () => {
-    expect(BADGES.map((b) => b.id)).toEqual(['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10']);
-    expect(BADGES[0]!.name).toBe('Handa ang Bag!');
+  it('defines the revised badges B01–B12', () => {
+    expect(BADGE_CATALOG.map((b) => b.id)).toEqual(['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12']);
+    expect(BADGE_CATALOG[0]!.name).toBe('Handa');
   });
 
   it('awards badges deterministically for demonstrated competencies', () => {
     const ev = evaluateRun(prepared());
-    expect(ev.badgeIds).toEqual(expect.arrayContaining(['B01', 'B05', 'B06']));
+    expect(ev.badgeIds).toEqual(expect.arrayContaining(['B02', 'B03', 'B11']));
   });
 
   it('awards fewer badges to careless play', () => {
@@ -102,7 +102,7 @@ describe('badges', () => {
 
   it('never awards a badge for an unsafe choice', () => {
     const ev = evaluateRun(careless());
-    expect(ev.badgeIds).not.toContain('B09');
-    expect(ev.badgeIds).not.toContain('B10');
+    expect(ev.badgeIds).not.toContain('B01');
+    expect(ev.badgeIds).not.toContain('B06');
   });
 });

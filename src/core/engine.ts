@@ -41,6 +41,8 @@ export type CommandResult = { ok: true; state: GameState; events: EngineEvent[];
 
 export interface ActionOption {
   actionId: string; label: string; timeCostMinutes: number; available: boolean; reasons: string[]; unsafe: boolean;
+  /** discovery (free, no pause) · preparation (fixed time cost) · conversation */
+  kind: 'discovery' | 'preparation' | 'conversation';
 }
 
 export interface ShopCatalogEntry {
@@ -58,6 +60,8 @@ function snapshot(s: GameState): StateSnapshot {
 }
 
 const usesKey = (id: string) => `uses:${id}`;
+/** Household NPC IDs map to the shared 'NPC' interactable; Aling Nena is her own interactable. */
+const npcKey = (id: string | undefined) => (id && id.startsWith('NPC_') && !INTERACTABLE_BY_ID.has(id) ? 'NPC' : id);
 
 export function evaluateAction(def: ActionDef, c: Ctx): { applicable: boolean; reasons: string[] } {
   if (def.applicable && !def.applicable(c)) return { applicable: false, reasons: ['Not applicable to this household.'] };
@@ -82,7 +86,7 @@ export class GameEngine {
   // ---------- queries ----------
   getAvailableActions(interactableId?: string): ActionOption[] {
     const c: Ctx = { s: this.state, p: this.state.household };
-    const key = interactableId?.startsWith('NPC_') ? 'NPC' : interactableId;
+    const key = npcKey(interactableId);
     if (key && key !== 'NPC') {
       const it = INTERACTABLE_BY_ID.get(key);
       if (!it || it.scene !== this.state.scene || (it.present && !it.present(c.p))) return [];
@@ -93,7 +97,7 @@ export class GameEngine {
       if (key ? !def.interactables.includes(key) : !def.interactables.some((i) => (i === 'NPC' ? this.state.scene === 'HOUSE' : INTERACTABLE_BY_ID.get(i)?.scene === this.state.scene))) continue;
       const ev = evaluateAction(def, c);
       if (!ev.applicable) continue;
-      out.push({ actionId: def.id, label: def.label, timeCostMinutes: def.timeCostMinutes, available: ev.reasons.length === 0 && !this.state.activeEvent, reasons: this.state.activeEvent ? ['Respond to the current event first.', ...ev.reasons] : ev.reasons, unsafe: !!def.unsafe });
+      out.push({ actionId: def.id, label: def.label, timeCostMinutes: def.timeCostMinutes, available: ev.reasons.length === 0 && !this.state.activeEvent, reasons: this.state.activeEvent ? ['Respond to the current event first.', ...ev.reasons] : ev.reasons, unsafe: !!def.unsafe, kind: def.kind ?? 'preparation' });
     }
     return out;
   }
@@ -106,7 +110,7 @@ export class GameEngine {
     return ev.actionIds.map((id) => {
       const def = ACTION_BY_ID.get(id)!;
       const r = evaluateAction(def, c);
-      return { actionId: id, label: def.label, timeCostMinutes: def.timeCostMinutes, available: r.reasons.length === 0, reasons: r.reasons, unsafe: !!def.unsafe };
+      return { actionId: id, label: def.label, timeCostMinutes: def.timeCostMinutes, available: r.reasons.length === 0, reasons: r.reasons, unsafe: !!def.unsafe, kind: def.kind ?? 'preparation' };
     });
   }
 
@@ -124,7 +128,7 @@ export class GameEngine {
   // ---------- commands ----------
   /** Player interaction with an object or NPC: opens an eligible interaction event, otherwise lists actions. */
   interact(interactableId: string): { ok: true; state: GameState; events: EngineEvent[]; actions: ActionOption[] } | { ok: false; error: EngineError } {
-    const key = interactableId.startsWith('NPC_') ? 'NPC' : interactableId;
+    const key = npcKey(interactableId)!;
     if (key !== 'NPC' && !INTERACTABLE_BY_ID.has(key)) return fail('UNKNOWN_INTERACTABLE', `Unknown interactable ${interactableId}`);
     if (this.state.activeEvent) return fail('EVENT_PENDING', 'Respond to the current event first.');
     const events: EngineEvent[] = [];

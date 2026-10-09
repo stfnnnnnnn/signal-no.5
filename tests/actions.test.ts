@@ -16,9 +16,10 @@ describe('action eligibility', () => {
   it('lists the actions for an interactable with availability and reasons', () => {
     const e = ready();
     const list = e.getAvailableActions('KITCHEN_SINK');
-    expect(list.map((a) => a.actionId)).toEqual(['FILL_CONTAINERS']);
+    expect(list.map((a) => a.actionId)).toEqual(['FILL_CONTAINERS', 'INSPECT_SUPPLIES']);
     expect(list[0]!.available).toBe(true);
     expect(list[0]!.timeCostMinutes).toBe(30);
+    expect(list[1]).toMatchObject({ kind: 'discovery', timeCostMinutes: 0 });
   });
 
   it('reports a missing prerequisite with a reason', () => {
