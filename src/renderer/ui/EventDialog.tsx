@@ -6,8 +6,7 @@ import { scenarioForCurrentEvent } from '../services/ai';
 import { store } from '../state/engineStore';
 import { useEngineState } from '../state/hooks';
 import { ui } from '../state/uiStore';
-
-const SPEAKERS: Record<string, string> = { NARRATOR: 'Narrator', NPC_NEIGHBOR: 'A neighbour (message)', NPC_CENTER_STAFF: 'Evacuation centre staff' };
+import { speakerLabel } from './format';
 
 export function EventDialog() {
   const state = useEngineState();
@@ -37,7 +36,7 @@ export function EventDialog() {
     <div className="panel event" role="dialog" aria-label={title}>
       <h2>{title} {c?.source === 'ai' && <span className="tag">AI-personalized</span>}</h2>
       {c ? (<>
-        <p className="speaker">{SPEAKERS[c.speaker] ?? c.speaker}</p>
+        <p className="speaker">{speakerLabel(c.speaker)}</p>
         <p className="dialogue">{c.dialogue}</p>
         <p className="desc">{c.description}</p>
       </>) : <p className="loading" aria-busy="true">The scene is taking shape…</p>}
