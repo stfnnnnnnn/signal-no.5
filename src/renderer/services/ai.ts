@@ -1,5 +1,8 @@
 // The renderer's only door to local AI (window.signal.ai). Always resolves; gameplay never waits on it.
 import { fallbackFromRequest } from '../../core/ai/scenario';
+import { buildDebriefRequest, fallbackDebriefNarration } from '../../core/ai/debrief';
+import type { DebriefEvaluation, DebriefNarration } from '../../shared/contracts/debrief';
+import type { GameState } from '../../shared/contracts/state';
 import type { AiStatus } from '../../shared/bridge';
 import type { ScenarioAIRequest, ScenarioContent } from '../../shared/contracts/ai';
 import type { SceneAIRequest, SceneAISuggestion } from '../../shared/contracts/scene';
@@ -60,6 +63,13 @@ export function narrateEvent(req: ScenarioAIRequest, runId: string, key: string,
 }
 
 export function clearScenarioCache() { cache.clear(); }
+
+/** Debrief narration (AI-worded, validated in main) or the reviewed fallback; never rejects. */
+export async function narrateDebriefSafe(ev: DebriefEvaluation, state: GameState): Promise<DebriefNarration & { source: 'ai' | 'fallback' }> {
+  const ai = bridge()?.ai;
+  if (ai) { try { return await ai.narrateDebrief(ev, buildDebriefRequest(ev, state)); } catch { /* reviewed text below */ } }
+  return { ...fallbackDebriefNarration(ev), source: 'fallback' };
+}
 
 /** Optional atmospheric variation; null (keep the deterministic directive) on any failure or without a bridge. */
 export async function requestSceneSuggestion(req: SceneAIRequest, runId: string): Promise<SceneAISuggestion | null> {
