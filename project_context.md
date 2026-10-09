@@ -99,19 +99,29 @@ Signal No. 5 is an offline-capable, local-AI-powered, 2D pixel-art typhoon prepa
 
 ## 7. Survey and customization specification
 
-### Proposed household questions (MVP)
-1. **Home context:** single-story / multi-story / apartment or similar. Since geometry is fixed, represent differences through visual theme, descriptive context, an optional interaction point, and scenario rules; do not promise physically accurate customized floor plans.
-2. **Household:** alone / with family or others / household includes someone who may need help during evacuation.
-3. **Assistance/accessibility:** does anyone need additional assistance moving or preparing? Optional and phrased respectfully; do not assume inability from age alone.
-4. **Essential medication/medical supplies:** yes / no / prefer not to say. Do not ask for diagnosis or medication names.
-5. **Emergency kit readiness:** prepared / partially prepared / not prepared.
+### Household survey (MVP): 5 questions + 1 visual choice
 
-**Optional additional inputs:** pets, existing communication plan, player nickname, avatar look, color palette. Avoid long onboarding.
+**Wording rules:** plain language, second person ("you", "your home"), one topic per question, short helper text that explains why we ask, no diagnoses or medication names, and "Prefer not to say" on every sensitive question. Use "go-bag" with "(emergency kit)" on first mention, because players may know either term.
+
+**Intro copy:** "A few quick questions shape your game. Your answers stay on this device. You can skip personal questions and delete your profile anytime."
+
+| # | Field | Question | Answers | Helper text |
+|---|---|---|---|---|
+| 1 | `homeType` | What kind of home do you live in? | Single-story house / Multi-story house / Apartment or condo / Prefer not to say | Changes the story details. The game map stays the same. |
+| 2 | `occupants` | Who lives in your home? | Just me / Me and others | Decides who you plan with during the storm. |
+| 3 | `assistanceNeeded` | Does anyone in your home need extra help to move or get ready in an emergency? | Yes / No / Prefer not to say | This could be for any reason. We won't ask for details. |
+| 4 | `essentialSupplies` | Does anyone in your home rely on medicine or medical supplies they can't go without? | Yes / No / Prefer not to say | Adds a reminder to pack them. We won't ask what they are. |
+| 5 | `goBagStatus` | Is your go-bag (emergency kit) ready? | Ready / Partly ready / Not ready / I'm not sure what that is | Sets what you start the game with. |
+| — | `themeId` (customization, not survey) | Pick a look for your home. | Warm / Cool / Muted | Visual only. Never affects gameplay or scoring. |
+
+**Defaults:** "Prefer not to say" maps to a neutral path: no extra events, and a general (not personal) checklist item. "I'm not sure what that is" starts the player like "Not ready" and adds a short explanation of a go-bag during `GO_BAG_PACKING`. Don't assume anyone needs help because of age alone.
+
+**Optional additional inputs (stretch):** pets, existing communication plan, player nickname, avatar look. Avoid long onboarding.
 
 **Example mapping:**
 | Input | State effect | Narrative effect | Debrief effect |
 |---|---|---|---|
-| Emergency kit: partial | Missing supplies flags | NPC prompts preparation decision | Checklist highlights missing categories |
+| Go-bag: partly ready | Missing supplies flags | NPC prompts preparation decision | Checklist highlights missing categories |
 | Assistance needed: yes | Adds household coordination objective | NPC asks for help planning | Reviews assistance plan |
 | Medication supplies: yes | Adds essential-supplies preparedness flag | Contextual reminder | Check continuity supplies, without medical advice |
 | Home type: multi-story | Context flag; optional upstairs interaction | Context-specific dialogue | Home-relevant general preparedness points |
@@ -125,8 +135,11 @@ Signal No. 5 is an offline-capable, local-AI-powered, 2D pixel-art typhoon prepa
 
 **Art approach:**
 - Fixed map collision and room boundaries.
-- Use one base house map and a small street/exterior scene; evacuation-center scene only if schedule permits.
+- **MVP map is the house only.** A street/exterior scene and an evacuation-center scene are **extended features**. Start them only after the full loop (survey → events → debrief → badges) works end to end.
+- Internal canvas resolution **320×180 or 384×216**, with integer scaling and nearest-neighbor filtering. Test legibility on a phone.
 - 16x16 tile grid is a practical production choice; an **8-bit-inspired** aesthetic does not require actual historical 8-bit hardware restrictions. Keep tile/sprite sizes consistent.
+- Sprite budget: one player base sprite with 2–3 outfit/palette variants; 1–2 NPC sprites.
+- Asset naming convention: `theme_[name]`, `prop_[name]`, `npc_[role]`, `overlay_[hazard]`. Document every asset's license.
 - Use pixel-perfect rendering, nearest-neighbor scaling, limited cohesive palettes, and a legible pixel font (with fallback for small mobile text).
 - Prebuilt tilesets and sprite sheets with appropriate licenses. Do not attempt real-time generative sprite/image creation.
 - Two or three palette presets (e.g., warm home, cool home, muted urban). Palette swaps should not alter navigation or safety rules.
@@ -145,9 +158,9 @@ Signal No. 5 is an offline-capable, local-AI-powered, 2D pixel-art typhoon prepa
 
 ## 9. Map and world constraints
 
-**MVP geometry:** One fixed playable house floor plan with logical areas (entry, living area, sleeping area, kitchen/supply area), plus optional small exterior/street map. Multi-story and apartment answers are contextual variants, not promises of physically unique architecture.
+**MVP geometry:** One fixed playable house floor plan with logical areas (entry, living area, sleeping area, kitchen/supply area). The exterior/street map is an extended feature only (see §8). Multi-story and apartment answers are contextual variants, not promises of physically unique architecture.
 
-**Interaction anchors:** door, emergency bag/supply cabinet, phone/radio, water storage, important documents, family NPC, window/house preparation point, exit. Each anchor maps to a known action ID.
+**Interaction anchors:** door, go-bag/supply cabinet, phone, radio, flashlight, water storage, important documents, medicine/supplies marker, family NPC, window/house preparation point, exit. Each anchor maps to a known action ID.
 
 **World variation:** theme palettes, furniture skins, occupant sprites, inventory props, rain intensity, lighting, optional obstruction overlays. Random seed can pick cosmetic variations, but AI need not generate map coordinates.
 
@@ -157,11 +170,36 @@ Signal No. 5 is an offline-capable, local-AI-powered, 2D pixel-art typhoon prepa
 
 ## 10. Narrative, branching, and simulation
 
-**Recommended story phases:**
-- Phase 1: **Before the storm** — warnings, preparing supplies, household planning.
-- Phase 2: **Escalation** — worsening weather, household coordination, resource and timing tradeoffs.
-- Phase 3: **Critical decision** — official evacuation advisory or shelter-related decision appropriate to scripted context; never teach a universal evacuation rule independent of official guidance.
-- Phase 4: **Aftermath/debrief** — consequences and practical learning.
+**Story phases** (these are also the `Phase` values in the code):
+1. `calm`: **Calm before the storm.** Explore, receive forecast context, inspect supplies.
+2. `preparation`: Pack essentials, plan with the household, check communications, secure the home.
+3. `escalation`: Rain and wind intensify; warnings are upgraded; interruptions happen.
+4. `decision`: Act on official evacuation guidance and coordinate household needs. Never teach a universal evacuation rule independent of official guidance.
+5. `resolution`: Reach a clear scenario ending (no graphic failure scenes).
+6. `debrief`: Review decisions, alternatives, gaps, checklist, and badges.
+
+### Event catalog (MVP): at least 10 consequential events per run
+
+**Rule:** every complete run encounters **at least 10 consequential events**. The ending (`STORM_OUTCOME`) doesn't count toward the 10. All 11 core events below fire in every run. Household profiles change *which variant* plays and *which actions* are offered; they don't skip core events. Write events as data (JSON/TS content files), not code, so content can be authored in parallel with the engine.
+
+All action consequences and safety framing below are **proposed and require safety review** (§11) before they're final.
+
+| # | Phase | Event ID | Approved action IDs | Profile-driven variants |
+|---|---|---|---|---|
+| 1 | calm | `FORECAST_BRIEFING` | `CHECK_ADVISORY`, `DELAY` | — |
+| 2 | calm | `SUPPLY_CHECK` | `INSPECT_SUPPLIES`, `DELAY` | `__KIT_READY`, `__KIT_MISSING` |
+| 3 | preparation | `GO_BAG_PACKING` | `PACK_GO_BAG`, `PACK_ESSENTIAL_SUPPLIES`*, `DELAY` | `__READY`, `__PARTIAL`, `__NOT_READY`, `__UNSURE` |
+| 4 | preparation | `WATER_AND_FOOD` | `STORE_WATER`, `STOCK_FOOD`, `DELAY` | — |
+| 5 | preparation | `COMMUNICATION_CHECK` | `CHARGE_PHONE`, `CHECK_RADIO`, `SHARE_CONTACT_PLAN` | `__ALONE`, `__WITH_OTHERS` |
+| 6 | preparation | `HOUSEHOLD_PLAN` | `AGREE_MEETING_PLAN`, `PLAN_ASSISTANCE`*, `DELAY` | `__ALONE`, `__WITH_OTHERS`, `__ASSISTANCE` |
+| 7 | preparation | `HOME_SECURING` | `SECURE_LOOSE_ITEMS`, `SECURE_WINDOWS`, `PROTECT_DOCUMENTS` | `__SINGLE_STORY`, `__MULTI_STORY`, `__APARTMENT` |
+| 8 | escalation | `WARNING_UPGRADE` | `CHECK_ADVISORY`, `UPDATE_HOUSEHOLD`, `DELAY` | — |
+| 9 | escalation | `POWER_INTERRUPTION` | `USE_FLASHLIGHT`, `CONSERVE_PHONE_BATTERY`, `CHECK_RADIO` | — |
+| 10 | escalation | `FLOOD_ADVISORY` | `CHECK_ADVISORY`, `PREPARE_TO_EVACUATE`, `GO_OUTSIDE_TO_LOOK`† | — |
+| 11 | decision | `EVACUATION_ADVISORY` | `CHECK_HOUSEHOLD`, `GRAB_GO_BAG`, `FOLLOW_ADVISORY`, `DELAY` | `__ASSISTANCE`, `__ESSENTIAL_SUPPLIES` |
+| — | resolution | `STORM_OUTCOME` | (none: ending) | Outcome class computed by the engine |
+
+\* Offered only when the matching survey answer is `yes`. † An unsafe choice offered on purpose so the debrief can explain why to avoid it. The game never rewards it, and never shows the player entering floodwater.
 
 **Example event chain:**
 1. A warning/advisory is received.
@@ -179,14 +217,22 @@ Signal No. 5 is an offline-capable, local-AI-powered, 2D pixel-art typhoon prepa
 
 ## 11. Gamification and learning feedback
 
-**Badge examples:**
-- Ready to Go — demonstrated emergency-kit preparedness.
-- Safety First — followed appropriate protective actions and advisories.
-- Community Care — considered assistance/household coordination.
-- Evacuation Planner — demonstrated an appropriate plan under the scenario's official guidance.
-- Preparedness Scholar — completed and reviewed the learning debrief.
+**Badge catalog (MVP): at least 10 badges.** Every badge is awarded **only** by deterministic engine rules, never by the AI. Conditions are proposed; finalize them alongside the safety review.
 
-**MVP:** Three badges plus a competency-based results screen; additional badges are stretch.
+| # | Badge ID | Name | Proposed condition |
+|---|---|---|---|
+| 1 | `INFORMED` | Stay Informed | Checked official advisories in `calm` **and** after `WARNING_UPGRADE` |
+| 2 | `READY_TO_GO` | Ready to Go | Go-bag fully packed before `escalation` |
+| 3 | `SUPPLY_KEEPER` | Supply Keeper | Stored water **and** stocked food |
+| 4 | `STAYING_CONNECTED` | Staying Connected | Charged phone **and** set up a contact plan or checked the radio |
+| 5 | `HOME_GUARD` | Home Guard | Completed at least 2 home-securing actions |
+| 6 | `COMMUNITY_CARE` | Community Care | Made an assistance or household plan (or contacted family/neighbors if living alone) |
+| 7 | `EARLY_BIRD` | Early Bird | Finished all preparation actions without any `DELAY` in `preparation` |
+| 8 | `SAFETY_FIRST` | Safety First | Never chose an unsafe action (e.g. `GO_OUTSIDE_TO_LOOK`) |
+| 9 | `EVACUATION_PLANNER` | Evacuation Planner | Chose `FOLLOW_ADVISORY` with go-bag and household ready |
+| 10 | `PREPAREDNESS_SCHOLAR` | Preparedness Scholar | Opened and finished reviewing the debrief |
+
+**Fairness rules:** every profile must be able to earn all 10 badges (conditions adapt to the survey; e.g. `COMMUNITY_CARE` for someone living alone). Every run earns at least one (`PREPAREDNESS_SCHOLAR`). Each badge has an earned explanation and a "how to earn" hint for replay. Additional badges are stretch.
 
 **Scoring:** Evaluate defined actions against a reviewed rubric. Avoid a numerical 'survival probability' or implying real-world certification. Show categories like warnings, supplies, communication, evacuation planning, and household assistance. Use score only as educational feedback, not a moral judgment.
 
@@ -216,30 +262,57 @@ Signal No. 5 is an offline-capable, local-AI-powered, 2D pixel-art typhoon prepa
 
 **Development runtime:** Ollama on developer laptop for rapid local API testing. **Mobile runtime:** llama.cpp-based Android integration or an appropriate embedded inference runtime, if a standalone Android build is required. The two are not equivalent deployments.
 
-**Output contract:** Strict JSON with a schema. The model must not invent event IDs, action IDs, props, scenes, or scores. Use temperature and output length constraints as appropriate; validate, retry at most a bounded number of times, and fall back to reviewed authored text. Avoid unbounded generation on every click; precompute or generate ahead of events.
+**Output contract:** Strict JSON with a schema (`ScenarioAIRequest` / `ScenarioAIResponse`, §15). The model must not invent event IDs, variant IDs, action IDs, speakers, props, scenes, or scores. It chooses only from the lists the engine sends. Use low temperature and output length limits. Generate ahead of time at phase transitions rather than on every click.
 
-**Illustrative request:**
+**Illustrative request** (built by the engine from validated state; contains no free-text personal data):
 ```json
 {
-  "phase": "pre_landfall",
-  "household": {"home_type": "single_story", "occupants": 3, "assistance_needed": true, "medication_supplies_needed": false, "kit_status": "partial"},
-  "state": {"warning_checked": true, "bag_ready": false, "time_remaining": 6},
-  "allowed_event_ids": ["SUPPLY_CHECK", "HOUSEHOLD_PLAN"],
-  "allowed_action_ids": ["CHECK_SUPPLIES", "PLAN_ASSISTANCE", "CHECK_ADVISORY"]
+  "schemaVersion": 1,
+  "eventId": "HOUSEHOLD_PLAN",
+  "phase": "preparation",
+  "household": {
+    "homeType": "singleStory",
+    "occupants": "withOthers",
+    "assistanceNeeded": "yes",
+    "essentialSupplies": "preferNotToSay",
+    "goBagStatus": "partial"
+  },
+  "state": {
+    "tick": 4,
+    "tickBudget": 12,
+    "flags": { "WARNING_CHECKED": true, "GO_BAG_PACKED": false },
+    "inventory": ["PHONE", "WATER"]
+  },
+  "recentDecisions": [{ "eventId": "SUPPLY_CHECK", "actionId": "INSPECT_SUPPLIES" }],
+  "allowedVariantIds": ["HOUSEHOLD_PLAN__WITH_OTHERS", "HOUSEHOLD_PLAN__ASSISTANCE"],
+  "allowedActionIds": ["AGREE_MEETING_PLAN", "PLAN_ASSISTANCE", "DELAY"],
+  "allowedSpeakers": ["NPC_FAMILY_MEMBER"],
+  "limits": { "dialogueMaxChars": 200, "descriptionMaxChars": 160 }
 }
 ```
 
 **Illustrative response:**
 ```json
 {
-  "event_id": "HOUSEHOLD_PLAN",
-  "speaker": "Family member",
-  "dialogue": "We need to agree on how everyone will get ready. Who will help with the supplies?",
-  "action_ids": ["PLAN_ASSISTANCE", "CHECK_SUPPLIES"]
+  "schemaVersion": 1,
+  "eventId": "HOUSEHOLD_PLAN",
+  "variantId": "HOUSEHOLD_PLAN__ASSISTANCE",
+  "speaker": "NPC_FAMILY_MEMBER",
+  "dialogue": "The go-bag is only half packed, and Lola will need help getting ready. Can we agree who helps her before the rain gets worse?",
+  "description": "Rain taps on the window. Your family gathers in the living room.",
+  "actionIds": ["PLAN_ASSISTANCE", "AGREE_MEETING_PLAN", "DELAY"]
 }
 ```
 
-**Validate:** JSON parse, schema, enum IDs, length, phase relevance, no unsupported safety claims, no invented personal details. If invalid, use deterministic fallback event.
+**Validate (adapter, in order):**
+1. JSON parses.
+2. Matches the Zod schema.
+3. `eventId` equals the requested event.
+4. `variantId`, `speaker`, and every `actionIds` entry are in the allowed lists; `actionIds` isn't empty.
+5. `dialogue` and `description` are within the length limits.
+6. A blocklist check finds no hotline numbers, URLs, invented warnings or signal levels, medical instructions, or "guaranteed/safe to" claims.
+
+On timeout (~8 s, to be tuned after benchmarking) or failed validation: retry once, then use the variant's reviewed fallback text. The adapter (not the model) tags the result `source: "ai" | "fallback"`, so the UI can label AI-personalized text. **Action button labels are engine-owned**, so the AI can't reword a safety action.
 
 **Proof of meaningful AI:** Two contrasting household profiles and/or decision histories produce different contextual events/dialogue while offline. Do not count cosmetic renaming as sufficient.
 
@@ -301,36 +374,138 @@ Signal No. 5 is an offline-capable, local-AI-powered, 2D pixel-art typhoon prepa
 
 ## 15. Interfaces / contracts to agree before parallel coding
 
-Define these as TypeScript types or JSON schemas by Hour 2:
-- `HouseholdProfile`
-- `VisualTheme`
-- `GameState`
-- `ActionId` and `ActionRequest`
-- `EventDefinition` and `EventInstance`
-- `ScenarioAIRequest` / `ScenarioAIResponse`
-- `DecisionLogEntry`
-- `DebriefEvaluation` and `BadgeAward`
+Define these as **Zod schemas** (with TypeScript types inferred from them) in one shared module (e.g. `src/core/contracts.ts`) by Hour 2. Every persisted or exchanged object carries `schemaVersion`.
 
-**Illustrative state (adapt as needed):**
+### Naming conventions
+| Thing | Convention | Example |
+|---|---|---|
+| Type names | PascalCase | `DecisionRecord` |
+| Object fields (TS **and** JSON on the wire) | camelCase, one scheme everywhere | `goBagStatus` |
+| String enums (survey answers, phases) | camelCase | `'preferNotToSay'`, `'escalation'` |
+| Event IDs | SCREAMING_SNAKE **noun phrase** (the situation) | `EVACUATION_ADVISORY` |
+| Action IDs | SCREAMING_SNAKE **verb first** (what the player does) | `FOLLOW_ADVISORY` |
+| Variant IDs | `<EVENT_ID>__<QUALIFIER>` | `HOUSEHOLD_PLAN__ASSISTANCE` |
+| Flags | SCREAMING_SNAKE, past/state | `GO_BAG_PACKED` |
+| Items | SCREAMING_SNAKE noun; matching asset `prop_[name]` | `FLASHLIGHT` ↔ `prop_flashlight` |
+| NPCs | `NPC_` + role; matching asset `npc_[role]` | `NPC_FAMILY_MEMBER` |
+| Badges | SCREAMING_SNAKE | `READY_TO_GO` |
+| Safety rules | `SR_` + short topic | `SR_FOLLOW_OFFICIAL_ADVISORY` |
+
+### Contract (illustrative; adapt during Hour 0–2 but keep the shape)
 ```ts
-type GameState = {
-  runId: string;
-  seed: number;
-  phase: 'preparation' | 'escalation' | 'critical' | 'debrief';
-  timeRemaining: number;
-  household: HouseholdProfile;
-  themeId: string;
-  warningChecked: boolean;
-  bagReady: boolean;
-  assistancePlanReady: boolean;
-  inventory: string[];
-  completedActionIds: string[];
-  eventHistory: string[];
-  decisionLog: DecisionLogEntry[];
+type Phase = 'calm' | 'preparation' | 'escalation' | 'decision' | 'resolution' | 'debrief';
+type Answer<T extends string> = T | 'preferNotToSay';
+
+type HouseholdProfile = {
+  schemaVersion: 1;
+  homeType: Answer<'singleStory' | 'multiStory' | 'apartment'>;
+  occupants: 'alone' | 'withOthers';
+  assistanceNeeded: Answer<'yes' | 'no'>;
+  essentialSupplies: Answer<'yes' | 'no'>;
+  goBagStatus: 'ready' | 'partial' | 'notReady' | 'unsure';
 };
+
+// Kept separate from HouseholdProfile: visuals must never affect rules or scoring.
+type VisualTheme = { themeId: 'warm' | 'cool' | 'muted'; avatarVariantId: string };
+
+type GameState = {
+  schemaVersion: 1;
+  runId: string;
+  seed: number;                 // reproducible demos
+  phase: Phase;
+  tick: number;                 // simulated time elapsed
+  tickBudget: number;           // ticks before the storm peaks
+  currentEventId: EventId | null;
+  household: HouseholdProfile;
+  theme: VisualTheme;
+  inventory: ItemId[];
+  flags: Partial<Record<FlagId, boolean>>;  // extensible; no one-off booleans
+  npcReadiness: Partial<Record<NpcId, 'notReady' | 'preparing' | 'ready'>>;
+  eventHistory: EventId[];
+  decisionLog: DecisionRecord[];
+  completed: boolean;
+};
+
+type ActionDefinition = {
+  id: ActionId;
+  label: string;                // engine-owned button text
+  tickCost: number;
+  effects: Effect[];            // add/remove item, set flag, set NPC readiness
+  safetyRuleId?: SafetyRuleId;  // links the action to reviewed guidance
+};
+
+type EventDefinition = {
+  id: EventId;
+  phase: Phase;
+  conditions: Condition[];      // eligibility, evaluated by the engine
+  approvedActionIds: ActionId[];
+  variants: {
+    id: VariantId;
+    when: Condition[];          // profile/state conditions for this variant
+    fallback: { speaker: NpcId; dialogue: string; description: string }; // reviewed text
+  }[];
+  learningObjective: string;
+  safetyRuleIds: SafetyRuleId[];
+};
+
+type StateSnapshot = Pick<GameState, 'tick' | 'inventory' | 'flags' | 'npcReadiness'>;
+
+type DecisionRecord = {
+  eventId: EventId;
+  variantId: VariantId;
+  actionId: ActionId;
+  tick: number;
+  stateBefore: StateSnapshot;
+  stateAfter: StateSnapshot;
+  safetyRuleId?: SafetyRuleId;
+};
+
+type ScenarioAIRequest = {      // see §12 for an example
+  schemaVersion: 1;
+  eventId: EventId;
+  phase: Phase;
+  household: HouseholdProfile;
+  state: Pick<GameState, 'tick' | 'tickBudget' | 'flags' | 'inventory'>;
+  recentDecisions: Pick<DecisionRecord, 'eventId' | 'actionId'>[]; // last 5 at most
+  allowedVariantIds: VariantId[];
+  allowedActionIds: ActionId[];
+  allowedSpeakers: NpcId[];
+  limits: { dialogueMaxChars: number; descriptionMaxChars: number };
+};
+
+type ScenarioAIResponse = {     // what the model must return
+  schemaVersion: 1;
+  eventId: EventId;
+  variantId: VariantId;
+  speaker: NpcId;
+  dialogue: string;
+  description: string;
+  actionIds: ActionId[];        // subset of allowedActionIds; order = display order
+};
+
+type ScenarioContent = ScenarioAIResponse & { source: 'ai' | 'fallback' }; // added by the adapter
+
+type DebriefEvaluation = {      // computed deterministically by the engine
+  schemaVersion: 1;
+  timeline: DecisionRecord[];
+  strengths: FindingId[];
+  gaps: FindingId[];
+  learningPoints: { safetyRuleId: SafetyRuleId; text: string }[]; // reviewed text only
+  checklistItems: ChecklistItemId[];  // from survey answers + gaps
+  badgeIds: BadgeId[];
+};
+
+type DebriefNarration = {       // AI: wording only, built from DebriefEvaluation
+  summary: string;              // ≤ 400 chars
+  highlightFindingIds: FindingId[]; // subset of strengths/gaps
+};
+
+type BadgeDefinition = { id: BadgeId; name: string; description: string; hint: string; condition: Condition[] };
 ```
 
 **Rule:** Backend owns valid state transitions; frontend renders state and dispatches known actions; AI returns constrained content and IDs, never directly mutates state.
+
+**Cross-team contract owners:** Frontend B + Backend A, survey-to-state. Frontend A + Backend A, event triggers and action IDs. Frontend B + Backend B, dialogue/debrief response shapes. Backend A + Backend B, the allowlist and reviewed safety content.
 
 ## 16. Suggested 20-hour execution plan
 
@@ -340,19 +515,31 @@ type GameState = {
 | 2–5 | Parallel foundations | Walkable map; working survey; deterministic state/actions; AI adapter stub |
 | 5–8 | First integration | Survey changes profile/state/visual theme; at least one AI event displayed |
 | 8–12 | Full vertical slice | One end-to-end typhoon run with branching decisions and a resolution |
-| 12–15 | Education layer | Reviewed consequence feedback, debrief, checklist, three badges |
+| 12–15 | Education layer | Reviewed consequence feedback, debrief, checklist, all 10 badges |
 | 15–17 | Visual customization and polish | Two themes, avatar variation if possible, rain/weather, mobile-friendly UI |
 | 17–19 | Reliability testing | Offline demo, different profiles, fallback handling, bug fixes |
 | 19–20 | Freeze and rehearse | Complete demo, backup recording, tool/model disclosure ready |
 
-**Integration checkpoints:** Hour 2 contracts, Hour 5 first merge, Hour 8 personalized event, Hour 12 full run, Hour 17 feature freeze. Never leave integration to the last hour.
+**Integration checkpoints:** a checkpoint is a hard, pass/fail integration milestone. All four members merge to `main`, and the team plays **one complete playthrough together**. If a checkpoint fails, the team stops adding features and either fixes the failure or cuts scope (cut order below) before moving on. Checkpoints exist so the four parallel workstreams can't drift apart until the last hour.
 
-**Fallback/cut order if behind:** extra animations/audio -> extra themes/avatars -> extra NPCs -> exterior/evacuation-center scene -> free-text commands. **Never cut:** working gameplay loop, survey-to-scenario effect, meaningful local AI proof, deterministic safety logic, and debrief.
+| Hour | Checkpoint | Pass condition |
+|---|---|---|
+| 2 | Contracts + AI feasibility | Shared schemas committed; the local model returns valid JSON on the chosen inference device; a blank game launches |
+| 5 | First merge | Map, survey, engine, and AI adapter run together on `main` |
+| 8 | Personalized event | Survey answers change state and theme; one AI-generated event plays |
+| 12 | Full run | All 10+ core events play in order through `STORM_OUTCOME` |
+| 17 | Feature freeze | Debrief, checklist, and all 10 badges work; only bug fixes, tests, and demo prep after this |
+
+**Content volume (10+ events, 10+ badges):** events and badges are data files. Backend A builds the engine to handle *any* event/badge definition by Hour 5, so the remaining content can be authored in parallel after that.
+
+**Fallback/cut order if behind:** extended street/evacuation-center scenes -> extra animations/audio -> extra themes/avatars -> extra NPCs -> profile variants beyond one per survey variable -> free-text commands. **Never cut:** working gameplay loop, the 10 core events, the 10 badges, survey-to-scenario effect, meaningful local AI proof, deterministic safety logic, and debrief.
 
 ## 17. Acceptance criteria and tests
 
 **Core gameplay:**
 - Player completes survey, selects theme, enters map, moves, interacts, makes decisions, reaches debrief.
+- Every complete run encounters at least 10 consequential events (§10).
+- At least 10 badges exist; each is earnable by every household profile; every run earns at least one (§11).
 - At least 3 earlier actions have visible effects on later state or available choices.
 - At least 3 survey variables meaningfully affect events/resources/objectives or debrief.
 - Two different profiles create distinguishable contextual experiences beyond names/colors.
@@ -361,6 +548,7 @@ type GameState = {
 - Model generates valid event/dialogue JSON without internet access on the disclosed inference device.
 - AI responses are validated; invalid output triggers a safe fallback.
 - Model cannot invent actions or override safety rules.
+- AI-personalized text is labeled in the UI (`source: "ai"` vs `"fallback"`).
 - UI remains responsive while inference occurs; loading state and timeout handling exist.
 
 **Visual/UX:**
@@ -414,9 +602,9 @@ type GameState = {
 ### Product and educational content
 - [ ] Lock target audience, learning outcomes, and scope: typhoon only.
 - [ ] Finalize 5-question survey and privacy copy.
-- [ ] Create approved action/event catalog and narrative phases.
+- [ ] Finalize the 11-event catalog (≥10 consequential) and its action consequences (§10).
 - [ ] Verify preparedness principles from official sources and create rule-to-source mapping.
-- [ ] Define badge conditions and debrief sections.
+- [ ] Finalize the 10 badge conditions (§11) and debrief sections.
 
 ### Technical decisions
 - [ ] Confirm final target device and whether local inference runs on it.
@@ -482,7 +670,7 @@ type GameState = {
 
 1. **Demo platform:** Laptop-local browser experience vs standalone Android inference. This is the highest-risk choice.
 2. **Game engine:** Phaser 3 + React or Godot 4, based on team's familiarity.
-3. **Map scope:** House only vs house + street; evacuation-center scene is optional.
+3. ~~Map scope~~ **Resolved:** house only for MVP; street and evacuation-center scenes are extended features (§8).
 4. **AI model:** Confirm exact model, quantization, device memory, and response latency.
 5. **Survey:** Final wording and which questions may be skipped.
 6. **Narrative:** Final authored event catalog, phases, and validated safety content.
@@ -494,4 +682,4 @@ By the end of the hackathon, a judge can open a working 8-bit typhoon preparedne
 
 ---
 
-**Document note:** This is a consolidated direction/implementation brief derived from the conversation and judging slides. The previously uploaded one-day build plan is supplementary; its 12-hour schedule, fixed cast, two-floor house, and free-text action interpreter are **not** binding requirements. All implementation specifics labeled proposed or undecided should be verified with the team before coding.
+**Document note:** This is a consolidated direction/implementation brief derived from the conversation, the judging slides, and *Signal No. 5 — General Project Direction Document v1.0* (team PDF). Where this file and the PDF differ, this file reflects the team's later decisions: at least 10 events and 10 badges, house-only MVP map, 6-phase model, and the §15 contract. The previously uploaded one-day build plan is supplementary; its 12-hour schedule, fixed cast, two-floor house, and free-text action interpreter are **not** binding requirements. All implementation specifics labeled proposed or undecided should be verified with the team before coding.
