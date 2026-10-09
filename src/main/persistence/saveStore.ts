@@ -6,9 +6,13 @@ import { z } from 'zod';
 import { BadgeId } from '../../shared/contracts/ids';
 import { HouseholdProfile } from '../../shared/contracts/household';
 import { GameState } from '../../shared/contracts/state';
+import { EMPTY_PROGRESS, ProgressFile, type AchievementId, type AchievementStatus } from '../../shared/contracts/progress';
+import { evaluateRun } from '../../core/evaluation/evaluate';
+import { applyRun, computeAchievements, markPlanViewed, summarizeRun } from '../../core/evaluation/achievements';
 
 const SLOT = /^[a-z0-9][a-z0-9-]{0,31}$/;
-const Badges = z.object({ schemaVersion: z.literal(1), badgeIds: z.array(BadgeId) });
+/** v2 = revised B01–B12 catalog. v1 files (old B01–B10 meanings) are reset (no real player data existed). */
+const Badges = z.object({ schemaVersion: z.literal(2), badgeIds: z.array(BadgeId) });
 
 function checkSlot(slot: string) {
   if (!SLOT.test(slot)) throw new Error(`invalid save slot name: ${slot}`);
@@ -57,7 +61,7 @@ export class SaveStore {
 
   async addBadges(ids: string[]): Promise<string[]> {
     const merged = [...new Set([...(await this.readBadges()), ...ids])].sort();
-    await this.atomicWrite(path.join(this.root, 'badges.json'), Badges.parse({ schemaVersion: 1, badgeIds: merged }));
+    await this.atomicWrite(path.join(this.root, 'badges.json'), Badges.parse({ schemaVersion: 2, badgeIds: merged }));
     return merged;
   }
 
@@ -66,6 +70,34 @@ export class SaveStore {
     const parsed = HouseholdProfile.safeParse(await this.readJson(path.join(this.root, 'profile.json')));
     return parsed.success ? parsed.data : null;
   }
+  // ---------- cross-run progress (achievements) ----------
+  async readProgress(): Promise<ProgressFile> {
+    const parsed = ProgressFile.safeParse(await this.readJson(path.join(this.root, 'progress.json')));
+    return parsed.success ? parsed.data : structuredClone(EMPTY_PROGRESS);
+  }
+
+  /**
+   * Record a COMPLETED run. The main process re-evaluates the state itself (score, Handa, badges) so the renderer
+   * cannot claim results. Idempotent per runId; abandoned runs are rejected. Earned badges are merged too.
+   */
+  async recordCompletedRun(raw: unknown, now = new Date().toISOString()): Promise<{ achievements: AchievementStatus[]; newlyUnlocked: AchievementId[] }> {
+    const state = GameState.parse(raw);
+    const ev = evaluateRun(state);
+    const summary = summarizeRun(state, ev, now); // throws for an incomplete run
+    const r = applyRun(await this.readProgress(), summary, now);
+    await this.atomicWrite(path.join(this.root, 'progress.json'), ProgressFile.parse(r.progress));
+    await this.addBadges(ev.badgeIds);
+    return { achievements: computeAchievements(r.progress), newlyUnlocked: r.newlyUnlocked };
+  }
+
+  async markPlanViewed(runId: string, now = new Date().toISOString()): Promise<AchievementStatus[]> {
+    const r = markPlanViewed(await this.readProgress(), runId, now);
+    await this.atomicWrite(path.join(this.root, 'progress.json'), ProgressFile.parse(r.progress));
+    return computeAchievements(r.progress);
+  }
+
+  async readAchievements(): Promise<AchievementStatus[]> { return computeAchievements(await this.readProgress()); }
+
   /** Privacy: the player can delete their stored household profile at any time. */
   async deleteProfile(): Promise<void> { await rm(path.join(this.root, 'profile.json'), { force: true }); }
 }

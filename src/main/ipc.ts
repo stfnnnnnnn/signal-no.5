@@ -35,6 +35,9 @@ export function registerIpc(d: IpcDeps) {
   ipcMain.handle(IPC.saveRemove, (_e, slot: unknown) => d.store.deleteGame(Slot.parse(slot)));
   ipcMain.handle(IPC.badgesRead, () => d.store.readBadges());
   ipcMain.handle(IPC.badgesAdd, (_e, ids: unknown) => d.store.addBadges(z.array(BadgeId).parse(ids)));
+  ipcMain.handle(IPC.achievementsRead, () => d.store.readAchievements());
+  ipcMain.handle(IPC.achievementsRecordRun, (_e, state: unknown) => d.store.recordCompletedRun(GameState.parse(state)));
+  ipcMain.handle(IPC.achievementsPlanViewed, (_e, runId: unknown) => d.store.markPlanViewed(RunId.parse(runId)));
   ipcMain.handle(IPC.profileWrite, (_e, p: unknown) => d.store.writeProfile(HouseholdProfile.parse(p)));
   ipcMain.handle(IPC.profileRead, () => d.store.readProfile());
   ipcMain.handle(IPC.profileRemove, () => d.store.deleteProfile());

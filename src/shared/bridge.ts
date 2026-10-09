@@ -4,6 +4,7 @@ import type { DebriefNarrationRequest, ScenarioAIRequest, ScenarioContent } from
 import type { DebriefEvaluation, DebriefNarration } from './contracts/debrief';
 import type { HouseholdProfile } from './contracts/household';
 import type { SceneAIRequest, SceneAISuggestion } from './contracts/scene';
+import type { AchievementStatus } from './contracts/progress';
 import type { GameState } from './contracts/state';
 
 export type AiStatus = 'starting' | 'warming' | 'ready' | 'unavailable' | 'stopped';
@@ -34,6 +35,12 @@ export interface SignalBridge {
     remove(slot: string): Promise<void>;
   };
   badges: { read(): Promise<string[]>; add(ids: string[]): Promise<string[]> };
+  achievements: {
+    read(): Promise<AchievementStatus[]>;
+    /** Record a COMPLETED run (main re-evaluates it). Idempotent per runId. */
+    recordRun(state: GameState): Promise<{ achievements: AchievementStatus[]; newlyUnlocked: string[] }>;
+    markPlanViewed(runId: string): Promise<AchievementStatus[]>;
+  };
   profile: { write(p: HouseholdProfile): Promise<void>; read(): Promise<HouseholdProfile | null>; remove(): Promise<void> };
   app: { info(): Promise<AppInfo> };
 }
@@ -46,6 +53,7 @@ export const IPC = {
   aiStatus: 'ai:status', aiStatusChanged: 'ai:status-changed', aiGenerate: 'ai:generateScenario', aiNarrate: 'ai:narrateDebrief', aiScene: 'ai:suggestScene',
   saveWrite: 'save:write', saveRead: 'save:read', saveList: 'save:list', saveRemove: 'save:remove',
   badgesRead: 'badges:read', badgesAdd: 'badges:add',
+  achievementsRead: 'achievements:read', achievementsRecordRun: 'achievements:recordRun', achievementsPlanViewed: 'achievements:planViewed',
   profileWrite: 'profile:write', profileRead: 'profile:read', profileRemove: 'profile:remove',
   appInfo: 'app:info',
 } as const;

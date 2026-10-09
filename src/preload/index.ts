@@ -21,6 +21,11 @@ const bridge: SignalBridge = {
     remove: (slot) => ipcRenderer.invoke(IPC.saveRemove, slot),
   },
   badges: { read: () => ipcRenderer.invoke(IPC.badgesRead), add: (ids) => ipcRenderer.invoke(IPC.badgesAdd, ids) },
+  achievements: {
+    read: () => ipcRenderer.invoke(IPC.achievementsRead),
+    recordRun: (state) => ipcRenderer.invoke(IPC.achievementsRecordRun, state),
+    markPlanViewed: (runId) => ipcRenderer.invoke(IPC.achievementsPlanViewed, runId),
+  },
   profile: { write: (p) => ipcRenderer.invoke(IPC.profileWrite, p), read: () => ipcRenderer.invoke(IPC.profileRead), remove: () => ipcRenderer.invoke(IPC.profileRemove) },
   app: { info: () => ipcRenderer.invoke(IPC.appInfo) },
 };
