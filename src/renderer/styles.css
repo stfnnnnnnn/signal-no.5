@@ -21,3 +21,11 @@ button.ghost { border-color: var(--muted); justify-content: center; }
 .reason { margin: 2px 0 0 4px; font-size: 12px; color: var(--warn); }
 .unsafe { color: var(--danger); }
 .prompt { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--panel); border: 2px solid var(--gold); padding: 4px 12px; z-index: 5; }
+.event { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(720px, 94vw); max-height: 70vh; overflow: auto; z-index: 20; }
+.event ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.tag { font-size: 11px; color: var(--ok); border: 1px solid currentColor; padding: 0 4px; vertical-align: middle; }
+.speaker { margin: 0; color: var(--sky); }
+.dialogue { margin: 4px 0; font-size: 15px; }
+.desc { margin: 0 0 4px; color: var(--muted); font-style: italic; }
+.loading { color: var(--muted); }
+.fine { margin: 8px 0 0; font-size: 11px; color: var(--muted); }

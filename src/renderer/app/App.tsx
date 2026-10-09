@@ -5,12 +5,13 @@ import { PhaserGame } from '../game/PhaserGame';
 import { InteractionPrompt } from '../ui/InteractionPrompt';
 import { InteractionMenu } from '../ui/InteractionMenu';
 import { DiscoveryCard } from '../ui/DiscoveryCard';
+import { EventDialog } from '../ui/EventDialog';
 
 export function App() {
   const [ready] = useState(() => store.state !== null || store.newGame(sliceHousehold(), SLICE_SEED).ok);
   if (!ready) return <div className="boot">Could not start the game.</div>;
   return (<>
     <PhaserGame />
-    <InteractionPrompt /><InteractionMenu /><DiscoveryCard />
+    <InteractionPrompt /><InteractionMenu /><DiscoveryCard /><EventDialog />
   </>);
 }
