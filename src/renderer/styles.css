@@ -99,3 +99,7 @@ input[type=color] { width: 2.4rem; height: 1.6rem; border: 2px solid var(--sky);
 .rain { position: absolute; inset: -40px; background-image: repeating-linear-gradient(105deg, transparent 0 22px, #9fd0ff14 22px 23px); animation: rain 0.9s linear infinite; }
 @keyframes rain { to { transform: translate(-12px, 40px); } }
 @media (prefers-reduced-motion: reduce) { .rain { animation: none; } }
+.continue { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); width: auto; justify-content: center; border-color: var(--gold); z-index: 6; padding: 8px 16px; }
+:root[data-mood="tense"] .hud, :root[data-mood="urgent"] .hud { border-bottom-color: var(--warn); }
+:root[data-mood="somber"] .hud { border-bottom-color: var(--muted); }
+:root[data-mood="hopeful"] .hud { border-bottom-color: var(--ok); }

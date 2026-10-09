@@ -2,6 +2,7 @@
 import { fallbackFromRequest } from '../../core/ai/scenario';
 import type { AiStatus } from '../../shared/bridge';
 import type { ScenarioAIRequest, ScenarioContent } from '../../shared/contracts/ai';
+import type { SceneAIRequest, SceneAISuggestion } from '../../shared/contracts/scene';
 
 const cache = new Map<string, Promise<ScenarioContent>>();
 const bridge = () => (typeof window !== 'undefined' ? window.signal : undefined);
@@ -59,6 +60,13 @@ export function narrateEvent(req: ScenarioAIRequest, runId: string, key: string,
 }
 
 export function clearScenarioCache() { cache.clear(); }
+
+/** Optional atmospheric variation; null (keep the deterministic directive) on any failure or without a bridge. */
+export async function requestSceneSuggestion(req: SceneAIRequest, runId: string): Promise<SceneAISuggestion | null> {
+  const ai = bridge()?.ai;
+  if (!ai) return null;
+  try { return await ai.suggestScene(req, runId); } catch { return null; }
+}
 
 let status: AiStatus = bridge() ? 'starting' : 'unavailable';
 const statusListeners = new Set<(s: AiStatus) => void>();

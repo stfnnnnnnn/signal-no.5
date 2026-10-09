@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Boot } from './scenes/Boot';
 import { House } from './scenes/House';
+import { Evacuation, Shop, Street } from './scenes/Rooms';
 
 export const BASE_W = 384;
 export const BASE_H = 216;
@@ -15,6 +16,6 @@ export function makeConfig(parent: HTMLElement): Phaser.Types.Core.GameConfig {
     loader: { imageLoadType: 'HTMLImageElement' },
     audio: { disableWebAudio: true, noAudio: true },
     input: { keyboard: { target: window } },
-    scene: [Boot, House],
+    scene: [Boot, House, Shop, Street, Evacuation],
   };
 }

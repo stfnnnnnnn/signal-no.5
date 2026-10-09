@@ -68,3 +68,10 @@ export const tileCenter = (tx: number, ty: number) => ({ x: tx * TILE + TILE / 2
 export function anchorSpriteRect(a: Anchor): { x: number; y: number; w: number; h: number } {
   return { x: a.tx * TILE + (TILE - a.size) / 2, y: (a.ty + 1) * TILE - a.size, w: a.size, h: a.size };
 }
+
+/** Where SceneDirective props are drawn in the house (visual only: props never change collision). */
+export const PROP_ANCHORS: Record<import('../../shared/contracts/scene').PropAnchor, { tx: number; ty: number }> = {
+  WINDOW: { tx: 17, ty: 17 }, YARD: { tx: 25, ty: 15 }, ENTRANCE: { tx: 26, ty: 17 }, STAIRS: { tx: 27, ty: 15 },
+  LIVING_TABLE: { tx: 15, ty: 10 }, GO_BAG_SPOT: { tx: 28, ty: 9 },
+  LIVING_DECOR: { tx: 12, ty: 8 }, KITCHEN_DECOR: { tx: 9, ty: 1 }, BEDROOM_DECOR: { tx: 27, ty: 1 },
+};
