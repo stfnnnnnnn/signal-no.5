@@ -14,6 +14,7 @@ import { buildFromOnboarding, isOnboardingInput } from './household/onboarding';
 import type { OnboardingInput } from '../shared/contracts/onboarding';
 import { createInitialState } from './init/initialState';
 import { deriveSeed } from './rng';
+import { checkShelterResolution } from './wellbeing';
 import { buildSceneDirective } from './scene/directive';
 import type { SceneDirective } from '../shared/contracts/scene';
 import * as sel from './selectors';
@@ -265,6 +266,7 @@ export class GameEngine {
     draft.decisionLog.push(decision);
     events.push({ type: 'actionCompleted', actionId: def.id, decisionSeq: decision.seq });
     if (ev) {
+      if (ev.eventId === 'EV10') checkShelterResolution(draft, ev.variantId, def.id, ev.actionIds);
       const h = [...draft.eventHistory].reverse().find((x) => x.eventId === ev.eventId && x.resolvedWith === null);
       if (h) h.resolvedWith = def.id;
       draft.activeEvent = null;

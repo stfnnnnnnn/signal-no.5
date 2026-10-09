@@ -96,5 +96,6 @@ export function createInitialState(p: HouseholdProfile, seed: number, runId: str
     decisionLog: [],
     earnedBadges: [],
     completed: false,
+    player: { wellbeing: { current: 100, max: 100 }, wellbeingEvents: [] },
   };
 }

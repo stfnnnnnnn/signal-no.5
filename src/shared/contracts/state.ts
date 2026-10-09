@@ -117,6 +117,18 @@ export const ActiveEvent = z.object({
 });
 export type ActiveEvent = z.infer<typeof ActiveEvent>;
 
+/**
+ * Player-only wellbeing (0–100): a fictional gameplay indicator, NOT a medical assessment or injury prediction.
+ * Changed only by the deterministic rules in src/core/wellbeing.ts. Household members have no wellbeing value.
+ */
+export const Wellbeing = z.object({ current: z.number().min(0), max: z.number().positive() }).refine((w) => w.current <= w.max, { message: 'current must not exceed max' });
+export type Wellbeing = z.infer<typeof Wellbeing>;
+export const PlayerState = z.object({
+  wellbeing: Wellbeing,
+  wellbeingEvents: z.array(z.object({ ruleId: z.string(), delta: z.number(), atMinute: z.number(), reason: z.string() })),
+});
+export const DEFAULT_PLAYER = { wellbeing: { current: 100, max: 100 }, wellbeingEvents: [] };
+
 export const GameState = z.object({
   schemaVersion: z.literal(2),
   runId: z.string(),
@@ -145,5 +157,6 @@ export const GameState = z.object({
   decisionLog: z.array(DecisionRecord),
   earnedBadges: z.array(BadgeId),
   completed: z.boolean(),
+  player: PlayerState.default(() => structuredClone(DEFAULT_PLAYER)),
 });
 export type GameState = z.infer<typeof GameState>;

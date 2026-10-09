@@ -4,6 +4,7 @@ import type { HouseholdProfile } from '../../shared/contracts/household';
 import type { GameState, Severity, StormConfig } from '../../shared/contracts/state';
 import { createRng, deriveSeed } from '../rng';
 import * as sel from '../selectors';
+import { checkAtPeak } from '../wellbeing';
 
 export const DEFAULT_LANDFALL_HOUR = 48;
 const SEVERITY: Severity[] = ['none', 'low', 'moderate', 'severe'];
@@ -141,6 +142,7 @@ function applyPeak(s: GameState) {
     const floodBad = env.floodSeverity === 'severe' && p.housing.floors === 1;
     env.shelterCondition = roofWeak && floodBad ? 'unsafe' : roofWeak || floodBad ? 'compromised' : 'normal';
   }
+  checkAtPeak(s);
 }
 
 /** Authored property and supply outcomes (GS §13 as categories; no numeric thresholds). */
