@@ -17,5 +17,5 @@
     "noEmit": true
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["node_modules", "spikes", "dist", "out", "src/renderer"]
+  "exclude": ["node_modules", "spikes", "dist", "out", "src/renderer", "tests/renderer-ui"]
 }

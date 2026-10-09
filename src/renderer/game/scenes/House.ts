@@ -6,6 +6,7 @@ import { ui } from '../../state/uiStore';
 import { interactWith } from '../../state/interactionController';
 import { ANCHORS, MAP_H, MAP_W, PLAYER_SPAWN, T, TILE, anchorSpriteRect, buildGrid, tileCenter } from '../layout';
 import { nearestAnchor } from '../proximity';
+import { acceptsInteractKey } from '../input';
 import { CHARACTER_FRAMES, charKey, itemKey, type Dir, type SpriteBase } from '../assets';
 
 const SPEED = 90;
@@ -89,7 +90,7 @@ export class House extends Phaser.Scene {
   }
 
   private tryInteract(event?: KeyboardEvent) {
-    if (event?.repeat || ui.isBlocking()) return; // a held key must not re-fire interactions
+    if (!acceptsInteractKey(event, ui.isBlocking())) return; // a held key must not re-fire interactions
     const id = this.nearest();
     if (id) interactWith(id, this.labels.get(id) ?? id);
   }
