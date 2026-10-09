@@ -18,7 +18,8 @@
   data\
     games\<slot>.json     GameState (one file per save slot)
     profile.json          HouseholdProfile (optional, player-controlled)
-    badges.json           { schemaVersion: 1, badgeIds: [...] } (earned across runs)
+    badges.json           { schemaVersion: 2, badgeIds: [...] } (earned across runs; v1 files reset)
+    progress.json         { schemaVersion: 1, runs: RunSummary[], plansViewed: [], unlocked: { A01: ISO, … } } (achievements)
   llm-server.json         PID file for the local model server (identity check on next launch)
   llm-server.log          llama-server log: startup lines and timings only (no prompts)
   selftest.json           only written by `SignalNo5.exe --self-test`
@@ -37,7 +38,8 @@
 | Inventory and resources | Inside the game save | `house`, `goBag`, `cash`, `phoneBattery` |
 | Decision history | Inside the game save | `decisionLog[]` (`DecisionRecord` with before/after snapshots) |
 | Event history | Inside the game save | `eventHistory[]`, `firedMilestones[]` |
-| Achievement progress | `badges.json` | Persists across runs; merged and de-duplicated by `addBadges` |
+| Badges | `badges.json` (schema v2) | Persists across runs; merged and de-duplicated by `addBadges` (also by `recordCompletedRun`) |
+| Achievement progress | `progress.json` | Run summaries (run ID, storm seed, mode, exposure, budget tier, score, Handa result, wellbeing %, badges, lesson IDs, rumour and Aling Nena flags). **No household or medical data.** Written by `recordCompletedRun` (main re-evaluates the state; idempotent per run ID; abandoned runs rejected) |
 | Generated dialogue cache | **Not persisted** | In-memory in `AIService`, keyed by `runId:eventId:variantId`; cleared when the app quits |
 | Configuration preferences (volume, etc.) | **Not implemented** | Gap: no settings store exists yet |
 
@@ -67,7 +69,10 @@ All of these are **asynchronous** bridge calls from the renderer (types in [`src
 | Read the profile | `await window.signal.profile.read()` | `profile:read` | `SaveStore.readProfile` → `HouseholdProfile \| null` |
 | **Delete the household profile** | `await window.signal.profile.remove()` | `profile:remove` | `SaveStore.deleteProfile` (also delete saves; they contain the profile too) |
 | Read badges | `await window.signal.badges.read()` | `badges:read` | `SaveStore.readBadges` |
-| Retain achievements | `await window.signal.badges.add(evaluation.badgeIds)` | `badges:add` | `SaveStore.addBadges` (merge) |
+| Retain badges | `await window.signal.badges.add(evaluation.badgeIds)` | `badges:add` | `SaveStore.addBadges` (merge) |
+| Record a completed run (achievements) | `await window.signal.achievements.recordRun(engine.getState())` | `achievements:recordRun` | `SaveStore.recordCompletedRun` |
+| Plan summary viewed (A10) | `await window.signal.achievements.markPlanViewed(runId)` | `achievements:planViewed` | `SaveStore.markPlanViewed` |
+| Read achievements | `await window.signal.achievements.read()` | `achievements:read` | `SaveStore.readAchievements` |
 
 **Runs** are engine operations in the renderer, **not** storage operations:
 

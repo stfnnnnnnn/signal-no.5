@@ -256,6 +256,88 @@ mergeSceneSuggestion(state: GameState, base: SceneDirective, s: SceneAISuggestio
 
 The contract, authority rules, runtime flow and the full list of asset IDs are in **[FRONTEND_BACKEND_CONTRACTS.md](../implementation/FRONTEND_BACKEND_CONTRACTS.md#scene-directives-ai-directed-environmental-variation)**. Schemas: `SceneDirective`, `SceneAIRequest`, `SceneAISuggestion` (`src/shared/contracts/scene.ts`). The IPC channel is `ai:suggestScene`, Zod-validated in main. It rejects only on an invalid request or `runId`.
 
+## 17c. Onboarding v2 (Q0 + 8 custom questions or 4 random steps)  (sync)
+
+```ts
+import { ONBOARDING_QUESTIONS, MAX_HOUSEHOLD_SIZE, type CustomOnboarding, type RandomOnboarding } from '../shared/contracts/onboarding';
+createGame(input: CustomOnboarding | RandomOnboarding | SurveyResponses /* legacy, deprecated */, { seed })
+```
+
+- **Render the questions from data:** `ONBOARDING_QUESTIONS` lists Q0, Q1–Q8, Q2b (exact size) and R1–R4, each with text, choices (`exclusive` marks options that can't be combined), `visibleWhen`, `optional` and `validation`.
+- **Validation errors** come back as `error.issues[]`, with `path[0]` set to the field name (`q2ExactSize`, `q3AgeCounts`, `q6Surroundings`, `r3OtherAgeGroups`, …).
+- **Q0:** `mode: 'custom' | 'random'`. It's stored as `profile.configMode`.
+- **Custom:** `q1Housing` (single, two or multi-story), `q2SizeRange` + `q2ExactSize` (for ranges, max `MAX_HOUSEHOLD_SIZE` = 10), `q3AgeCounts` (must add up to the size), `q4Assistance`, `q5MedicalSupplies`, `q6Surroundings` (waterway and floodProne can combine; neither and notSure are exclusive), `q7Pets`, `q8Preparedness`.
+- **Random:** `r1SizeRange`, `r2PlayerAge` (13+), `r3OtherAgeGroups` (skip for 1 person, or `['surprise']`), `r4Preference` (optional, default `surprise`).
+- **Customization (both paths, not counted as questions):** `customization: { theme?, playerMemberIndex?, appearance, clothingColor?, minimumBudgetChallenge }`. `minimumBudgetChallenge` gives ₱800; the default is moderate (₱1,500). The random path's `challenging` preference also gives the minimum budget and the highest exposure.
+- **Profile additions:** `profile.exposure` (`standard | waterway | floodProne | both | unknown`, a fictional difficulty) and `profile.scenarioPreference`. Unknown or undisclosed answers are kept as `unknown` / `undisclosed`.
+
+## 17d. In-game preparedness interactions
+
+`ActionOption.kind` tells the UI how to present an action:
+
+| Kind | Meaning |
+|---|---|
+| `discovery` | Reveals information. 0 game minutes, and the UI must **not** pause the clock for it |
+| `preparation` | Fixed time cost; changes resources and flags |
+| `conversation` | Short talk (5 min) |
+
+Don't call `pause('dialogue')` for optional interactions; only mandatory events pause the clock.
+
+New interactions:
+- `BEDROOM_MEDICATION` → `CHECK_ESSENTIAL_SUPPLIES` (discovery). The cabinet also exists when the medical answer was "not sure" or "prefer not to say", and checking it is a privacy-preserving objective.
+- `LIVING_PHONE` → `CHARGE_POWER_BANK`.
+- **`NPC_ALING_NENA`** (an interactable at the entrance) → `TALK_TO_NENA` (conversation) and `HELP_NENA_PREPARE` (45 min, only before the advisory and while it's safe outside; never a rescue). EV12 offers it too.
+- `INSPECT_GO_BAG` and `INSPECT_SUPPLIES` are now discovery actions (0 min).
+
+## 17e. Player wellbeing  (state)
+
+`state.player.wellbeing { current, max: 100 }` is a fictional gameplay indicator, not a medical value, and applies to the player only.
+
+`state.player.wellbeingEvents[] { ruleId, delta, atMinute, reason }` explains each change. There are only two rules (`WELLBEING_RULES` in `src/core/wellbeing.ts`):
+
+| Rule | Change | When |
+|---|---|---|
+| `W_ADVISORY_IGNORED_SEVERE_FLOOD` | −15 | Stayed home after an applicable advisory and the home flooded severely |
+| `W_REMAINED_IN_UNSAFE_ROOM` | −10 | In EV10's critical variant, chose something other than "Move everyone to the safest room" |
+
+Show wellbeing in the HUD and the debrief. Don't display it as health or injury.
+
+## 17f. Badges (B01–B12) and Handa
+
+`engine.evaluate()` (or `evaluateRun(state)`) returns a `DebriefEvaluation` that now includes:
+- `badges[] { id, status: 'eligible' | 'earned' | 'notEarned' | 'notApplicable', reasons[] }`, all 12 in order. `eligible` means in progress (the run isn't complete yet).
+- `handa { earned, runCompleted, wellbeingPercent, wellbeingThreshold: 85, wellbeingMet, criticalCompetencies[] { objectiveId, applicable, met }, criticalGaps[], evacuationAndAssistanceMet, exposure, reasons[] }`.
+- `lessonIds[]`: the lesson cards unlocked this run.
+- `badgeIds[]`: earned badges only, as before.
+
+Display metadata (name, description, hint, `iconAssetId`) comes from `engine.getBadgeCatalog()`.
+
+> **The Handa *badge* (B01) and the Handa *ending* are different things.**
+> - The ending (`ev.ending`: `handa` ≥ 85 score, `nakaraos` 60–84, `nahirapan` < 60) is score-based.
+> - The badge (`ev.handa.earned`) needs:
+>   - a completed run;
+>   - raw player wellbeing ≥ 85% (inclusive and unrounded, so a UI showing "85%" from 84.6 does **not** qualify);
+>   - every applicable critical competency met (`CRITICAL_OBJECTIVES` in `src/core/evaluation/handa.ts`: O_WATER, O_GO_BAG, O_BULLETIN, O_COMMUNICATION, O_ACCOUNTED, O_DESTINATION, O_ADVISORY_RESPONSE, O_MEDICATION, O_ASSISTANCE, O_HAZARD_RESPONSE, O_NO_UNSAFE);
+>   - no critical gaps;
+>   - the household evacuation and assistance rules met (B08).
+> - Neither depends on the other.
+
+For a "Handa breakdown" panel, show `wellbeingPercent` against 85, each item in `criticalCompetencies` (skip `applicable: false`), and `reasons`.
+
+## 17g. Cross-run achievements (A01–A10)  (async)
+
+```ts
+window.signal.achievements.recordRun(state: GameState): Promise<{ achievements: AchievementStatus[]; newlyUnlocked: string[] }>
+window.signal.achievements.markPlanViewed(runId: string): Promise<AchievementStatus[]>   // call when the plan/checklist summary is shown
+window.signal.achievements.read(): Promise<AchievementStatus[]>
+// AchievementStatus { id, name, description, iconAssetId, progress, target, unlocked, unlockedAt }
+```
+
+- Call `recordRun` once when `runCompleted` fires.
+- The main process **re-evaluates the state itself** and stores a run summary with no household or medical data. It also merges earned badges into `badges.read()`.
+- Calls are idempotent per `runId`, and incomplete runs are rejected (the promise rejects).
+- `newlyUnlocked` drives unlock toasts. The catalog is `engine.getAchievementCatalog()`.
+
 ---
 
 ## 18. Known gaps
@@ -271,4 +353,5 @@ The contract, authority rules, runtime flow and the full list of asset IDs are i
 | G7 | No save-schema migration | Saves from older schema versions read as `null` |
 | G8 | React, Phaser and Playwright are not installed; no import alias | Frontend adds its own dependencies and config |
 | G9 | Focus-loss pause isn't automatic | Call `pause('focusLost')` on window blur and `resume('focusLost')` on focus |
+| G11 | Shopkeeper and center staff have no NPC cue or interaction IDs beyond the shop counter and EV11 | Presentation-only characters |
 | G10 | No per-item add/remove for the go-bag (GD §6) | Packing happens through `PACK_GO_BAG` and the `PACK_MEDICATION`/`PREPARE_PET_SUPPLIES`/`PREPARE_CHILD_SUPPLIES` actions |

@@ -25,6 +25,13 @@ Sources: **GD** = `docs/specs/SIGNAL_NO_5_COMPLETE_GAME_DESIGN.md` (v3.0) · **G
 | R15 | Medication target | GS: 3 days start, 7-day target (workbook). | **Experimental.** Medication is tracked as a readiness flag (`medicationPacked`, `medicalContinuityPlan`) and never as day counts, to avoid medical prescriptions. |
 | R16 | Household-size ranges | HF Q1 uses ranges. | Exact size = sum of the Q2 age grid, which must fall within the Q1 range (validation error otherwise). |
 
+| R17 | Badges | GD §15 B01–B10 (Handa ang Bag!, Tubig at Pagkain, Balitang Beripikado, Pamilyang Handa, Ligtas na Dokumento, May Plano Tayo, Walang Maiiwan, Handa sa Dilim, Tamang Desisyon, Signal No. 5 Master) | **Replaced by the approved 12-badge catalog** B01 Handa … B12 Powered Up (`src/core/content/badges.ts`). Badge IDs were reused with new meanings, so `badges.json` moved to schema v2 and v1 files are reset (there was no real player data). The old definitions are kept in this row for traceability. |
+| R18 | Onboarding | HF 26 questions (R8) | **Onboarding v2:** Q0 mode + 8 custom questions or 4 random steps (`src/shared/contracts/onboarding.ts`). The 26-question path stays accepted for compatibility (deprecated). Apartment and condo housing were removed from new onboarding. |
+| R19 | Health | R4 deprecated numeric health | **Limited reintroduction:** player-only *wellbeing* (0–100, fictional), changed by exactly two verified unsafe-decision rules (−15 advisory ignored with a severe flood at home; −10 remained in an unsafe room). No household-member values and no resource-health simulation. Used by Handa (≥ 85%). |
+| R20 | Flood difficulty | Flood severity from surroundings + history ±1 | **Exposure profiles** (`EXPOSURE_PROFILES`): standard/waterway/floodProne/both/unknown with fixed peak, onset, escalation and advisory lead. Fictional. |
+| R21 | Endings vs Handa | — | Score endings (Handa ≥ 85 / Nakaraos 60–84 / Nahirapan < 60) stay **independent** of the Handa badge. |
+| R22 | Water/food objectives | Measured at landfall | Measured as **prepared stores at heavy rain** (evacuees carry only part of them), so Handa stays attainable for households that correctly evacuate. |
+
 ## 2. Variable status keys (used in the traceability matrix)
 - **Active:** stored and mutated by the engine.
 - **Derived:** computed by selectors, never stored.

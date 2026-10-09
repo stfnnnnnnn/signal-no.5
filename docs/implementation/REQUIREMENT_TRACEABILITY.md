@@ -26,6 +26,11 @@ Status: ✅ implemented + tested · 🟡 partial · ⏳ deferred · ⛔ deprecat
 | GD §15 | Badges B01–B10, debrief elements | `content/badges.ts`, `content/findings.ts` | ✅ | `evaluation.test` |
 | GD §16 | AI director: engine owns event/variant/actions/facts; AI narrates; grounding guard; fallback; 2048 ctx, 220 tokens, 12 s, warm-up, concurrency 1 | `core/ai/*`, `main/ai/aiService.ts` | ✅ | `ai.test`, `main/aiService.test`, packaged self-test |
 | Add-on | AI-directed scene and environmental variation: deterministic directive (weather, lighting, flood, props, cues, audio, mood, transition) + optional validated AI suggestions that never override state | `src/core/scene/*`, `shared/contracts/scene.ts`, `AIService.suggestScene` | ✅ | `scene.test`, `main/aiService.test`, real-model self-test |
+| Directive 2026-10-09 | Onboarding v2 (Q0, 8 custom, 4 random), seeded and reproducible | `core/household/onboarding.ts`, `contracts/onboarding.ts` | ✅ | `onboarding.test` |
+| Directive 2026-10-09 | Environmental exposure difficulty (5 profiles, flood timing) | `content/storm.ts` `EXPOSURE_PROFILES` | ✅ | `exposure.test` |
+| Directive 2026-10-09 | Player wellbeing (2 verified penalties) | `core/wellbeing.ts` | ✅ | `wellbeing.test` |
+| Directive 2026-10-09 | Badges B01–B12, Handa ≥ 85% (boundary, attainability for all profiles) | `evaluation/badges.ts`, `evaluation/handa.ts` | ✅ | `badges.test` (mutation-checked) |
+| Directive 2026-10-09 | Achievements A01–A10 + persistence | `evaluation/achievements.ts`, `SaveStore` | ✅ | `achievements.test`, `integration.test` |
 | GD §17 | Persistence (saves, badges, profile; replay resets run) | `main/persistence/saveStore.ts`, `startRun` | ✅ | `main/saveStore.test`, `clock.test` save/load |
 | GD §17 | Packaged `.exe` offline | `scripts/pack.mjs`, `main/index.ts --self-test` | 🟡 runs packaged without the CUDA toolkit on PATH; airplane-mode run still pending | self-test 2026-10-09 |
 | GD §17 | Acceptance matrix: four-member roster ✅, two-story ✅, theme ✅, collision (frontend), bag prompt ✅, water ✅, buy ✅, funds ✅, 32× ✅, milestone at 32× ✅, dialogue pauses ✅, 1.5 h action ✅, medical event ✅, outage variants ✅, advisory choices ✅, unsupported AI fact ✅, model unavailable ✅, deterministic debrief ✅, badge ✅, replay 🟡 (`startRun`), packaged offline 🟡 | — | — | various |

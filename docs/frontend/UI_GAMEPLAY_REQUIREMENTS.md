@@ -133,7 +133,27 @@ On interact, call `engine.interact(id)`. Then either open the event dialog or sh
   - Replay options: same household (`startRun`) or a new household (`createGame`).
 - **Optional:** badge unlock animations, printable checklist.
 
-## 13. Survey UI (HF)
+## 12b. Badges, Handa and achievements (revised)
+
+- **MVP:**
+  - All 12 badges from `engine.getBadgeCatalog()`, each with a status from `ev.badges`. Show *Not applicable* neutrally; it's never a failure.
+  - A Handa breakdown: wellbeing % vs **85%**, critical competencies, gaps and `reasons`.
+  - The **ending label and the Handa badge shown separately**.
+  - A player wellbeing meter (not "health").
+  - An achievements screen (`achievements.read()`) with progress bars (`progress`/`target`) and unlock toasts from `recordRun().newlyUnlocked`.
+- Call `achievements.markPlanViewed(runId)` when the personalized plan or checklist is displayed.
+
+## 13. Onboarding UI (onboarding v2; supersedes the 26-question survey)
+
+- **MVP:**
+  - Q0 mode choice, then 8 custom questions or 4 random steps, rendered from `ONBOARDING_QUESTIONS`.
+  - The Q2b exact-size picker (max 10) and the Q3 age counters, with a live total.
+  - Q6 multi-select with exclusive options.
+  - R3 skipped for 1 person; R4 skippable.
+  - Customization: theme, player, appearance, and a "minimum budget challenge" toggle.
+  - The game takes over from here: it assesses preparedness through interactions, not more questions.
+
+## 13-legacy. Survey UI (HF, deprecated)
 
 - **MVP:**
   - All 26 questions with the HF wording and options, and "Prefer not to say" where HF provides it.

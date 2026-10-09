@@ -10,7 +10,7 @@ A **local language model** (llama.cpp + Qwen3, running on the same laptop) write
 
 | System | What it does | Where |
 |---|---|---|
-| Household configuration | 26-question survey → validated profile → roster (Boy/Girl/Mom/Dad sprites, ≤3 visible NPCs), starting resources and needs; fictional or partly randomised households | `src/core/household/`, `src/core/init/` |
+| Household configuration | Q0 mode + 8-question custom or 4-step random onboarding (legacy 26-question survey still accepted) → validated profile → roster (Boy/Girl/Mom/Dad sprites, ≤3 visible NPCs), starting resources and needs; fictional or partly randomised households | `src/core/household/`, `src/core/init/` |
 | Deterministic simulation | Single authoritative `GameState`; every change goes through engine commands and is logged as a `DecisionRecord` | `src/core/engine.ts` |
 | Hybrid clock | 240 real s = 1 game hour at 1×; speeds 1/2/4/8/16/32×; fixed action costs; pauses; milestones never skipped | `src/core/engine.ts`, `src/core/content/storm.ts` |
 | Preparation actions | 19 actions (water, go-bag, documents, windows, roof, communication plan, …) with prerequisites and time costs | `src/core/content/actions.ts` |
@@ -19,7 +19,7 @@ A **local language model** (llama.cpp + Qwen3, running on the same laptop) write
 | Evacuation and aftermath | Advisory, assistance, route, travel, arrival, shelter-at-home hazards, authored damage, 3-day recovery | `src/core/content/*` |
 | Local AI narrative | Context builder, constrained JSON decoding, validation, grounding guard, reviewed fallback text | `src/core/ai/`, `src/main/ai/` |
 | Scene directives | Deterministic weather, lighting, flood, prop, NPC-cue and audio presets from state; optional AI atmospheric variations, validated and merged without overriding state | `src/core/scene/`, `src/shared/contracts/scene.ts` |
-| Scoring and badges | 6 weighted competencies (100 pts), endings Handa/Nakaraos/Nahirapan, Na-rescue overlay, badges B01–B10, lessons and checklist | `src/core/evaluation/`, `src/core/content/badges.ts`, `findings.ts` |
+| Scoring, badges, achievements | 6 weighted competencies (100 pts), score endings, badges B01–B12 (Handa needs ≥ 85% player wellbeing + critical competencies), lessons, cross-run achievements A01–A10 | `src/core/evaluation/`, `src/core/content/badges.ts`, `findings.ts` |
 | Desktop packaging | Electron app + llama.cpp runtime + one model as a portable folder with `SignalNo5.exe` | `src/main/`, `scripts/pack.mjs` |
 
 ## Technology stack
@@ -49,7 +49,7 @@ Prerequisites: Windows 10/11 x64, Git, **Node.js ≥ 22.12** (Node 24 LTS recomm
 git clone <repository-url> "signal no.5"
 cd "signal no.5"
 npm install
-npm test            # 185 backend tests
+npm test            # 289 backend tests
 npm run typecheck   # tsc --noEmit
 npm run dev         # Electron + Vite dev server; opens the backend dev harness
 ```

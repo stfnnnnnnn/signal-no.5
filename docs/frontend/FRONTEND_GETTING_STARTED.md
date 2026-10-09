@@ -10,7 +10,7 @@ git clone <repository-url> "signal no.5"
 cd "signal no.5"
 npm install
 node node_modules/electron/install.js   # only if node_modules\electron\dist\electron.exe is missing (npm 11)
-npm test              # expect 185 passed
+npm test              # expect 289 passed
 npm run dev           # opens the Electron window with the backend dev harness
 ```
 

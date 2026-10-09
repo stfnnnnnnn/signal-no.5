@@ -78,7 +78,7 @@ When two documents disagree:
 | `tests/main/*.test.ts` | Model-server manager (real child process + `fake-llama-server.mjs`), AI service (real HTTP fake model), save store (temp folders) |
 | `tests/helpers.ts`, `tests/fixtures/households.ts` | `newGame`, `playToEnd`, `resolveFirst`; `familySurvey()`, `aloneSurvey()` |
 
-Run with `npm test` (185 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
+Run with `npm test` (289 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
 
 ## 11. Packaging
 | Document | Description | Audience | Type |

@@ -39,7 +39,7 @@ node node_modules/electron/install.js
 | Run the built app | `npm run start` |
 | Package the Windows folder | `npm run pack` (see [WINDOWS_PACKAGING.md](WINDOWS_PACKAGING.md)) |
 
-Expected results: `npm test` → **185 passed**; `npm run typecheck` → no output, exit code 0.
+Expected results: `npm test` → **289 passed**; `npm run typecheck` → no output, exit code 0.
 
 ## 4. Environment variables (all optional)
 

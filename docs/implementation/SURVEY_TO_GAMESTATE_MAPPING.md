@@ -1,4 +1,35 @@
-# Survey → GameState Mapping (26 questions)
+# Survey → GameState Mapping
+
+## Onboarding v2 (current)
+
+**Pipeline:** `CustomOnboarding` / `RandomOnboarding` → `buildFromOnboarding` (`src/core/household/onboarding.ts`). This converts the input into the established survey shape and reuses `buildHouseholdProfile` (one roster and validation implementation), then produces `HouseholdProfile` (+ `configMode`, `exposure`, `scenarioPreference`) → `createInitialState`.
+
+| Q | Field | Profile effect | Gameplay effect |
+|---|---|---|---|
+| Q0 | `mode` | `configMode` | Replay and achievements (A09) |
+| Q1 | `q1Housing` | `housing.floors` 1/2/3 (layout fixed; `type: detached`) | Window requirement for B09 (2/3/4), supply loss in floods (single floor), dialogue |
+| Q2 | `q2SizeRange` + `q2ExactSize` | `size` (max 10) | Water target 12 L × size, food 3 × size |
+| Q3 | `q3AgeCounts` | `members[]` (sex unspecified → seeded sprite) | Roster, NPCs, dependents, child supplies |
+| Q4 | `q4Assistance` | `assistance.required` yes/no/**unknown** | Assistance objective, departure gate, B08 |
+| Q5 | `q5MedicalSupplies` | `medical.essentialMedication` yes/no/**unknown/undisclosed** | yes → O_MEDICATION, B04. Unknown/undisclosed → medicine-cabinet discovery (O_MEDICAL_CHECK); B04 not applicable |
+| Q6 | `q6Surroundings` | `exposure` standard/waterway/floodProne/both/unknown | Flood peak, onset, escalation, advisory timing (`EXPOSURE_PROFILES`) |
+| Q7 | `q7Pets` | `pets.present` (prefer not to say → not present) | Pet area, pet supplies, B08 |
+| Q8 | `q8Preparedness` | `preparedness.*` (provisional) | Starting go-bag, supplies, plan flags. **Scoring uses in-game state only** |
+| — | `customization` | theme, player, appearance, `minimumBudgetChallenge` | Budget ₱1,500 by default, ₱800 with the challenge |
+| R1 | `r1SizeRange` | seeded exact size | as Q2 |
+| R2 | `r2PlayerAge` | the player's age group (counted in the size) | — |
+| R3 | `r3OtherAgeGroups` | others drawn from the chosen groups (an adult is added if an adolescent would be the only carer of young children) | as Q3 |
+| R4 | `r4Preference` | surprise (seeded) / balanced (standard or waterway, moderate budget) / challenging (both, ₱800) | Difficulty |
+
+**Neutral defaults for fields that aren't asked (custom):**
+- roof `notSure`, so roof work is **not** required;
+- exits `one`, flood history `notSure`;
+- no equipment or allergies recorded;
+- no condition categories (diagnoses are never asked or generated).
+
+---
+
+## Legacy 26-question survey (deprecated, still accepted)
 
 **Pipeline:** `SurveyResponses` → `buildHouseholdProfile` (`src/core/household/buildProfile.ts`) → `HouseholdProfile` v2 → `createInitialState` (`src/core/init/initialState.ts`) → `GameState`.
 
