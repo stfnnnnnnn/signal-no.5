@@ -15,6 +15,10 @@ import type { OnboardingInput } from '../shared/contracts/onboarding';
 import { createInitialState } from './init/initialState';
 import { deriveSeed } from './rng';
 import { checkShelterResolution } from './wellbeing';
+import { evaluateRun } from './evaluation/evaluate';
+import { BADGE_CATALOG, type BadgeMeta } from './content/badges';
+import { ACHIEVEMENT_CATALOG, type AchievementMeta } from './content/achievements';
+import type { DebriefEvaluation } from '../shared/contracts/debrief';
 import { buildSceneDirective } from './scene/directive';
 import type { SceneDirective } from '../shared/contracts/scene';
 import * as sel from './selectors';
@@ -218,6 +222,13 @@ export class GameEngine {
     this.state = draft;
     return { ok: true, state: this.getState(), events: [{ type: 'purchaseCompleted', shopItemId, quantity, total }] };
   }
+
+  /** Deterministic debrief: score/ending, categories, findings, all 12 badge statuses, Handa breakdown, lessons. */
+  evaluate(): DebriefEvaluation { return evaluateRun(this.state); }
+  /** Badge display metadata (names, descriptions, hints, icon asset IDs). */
+  getBadgeCatalog(): BadgeMeta[] { return structuredClone(BADGE_CATALOG); }
+  /** Achievement display metadata; progress comes from window.signal.achievements.read(). */
+  getAchievementCatalog(): AchievementMeta[] { return structuredClone(ACHIEVEMENT_CATALOG); }
 
   /** Deterministic scene presentation for the current state (weather, lighting, flood, props, cues, audio). */
   getSceneDirective(): SceneDirective { return buildSceneDirective(this.state); }
