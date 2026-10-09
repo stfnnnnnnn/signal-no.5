@@ -1,0 +1,30 @@
+// Presentation-only UI state (which overlay is open, the prompt, toasts). Never holds game state.
+import type { ActionOption } from '../../core/engine';
+import { store } from './engineStore';
+
+export type Overlay =
+  | { kind: 'none' }
+  | { kind: 'menu'; interactableId: string; label: string; actions: ActionOption[] }
+  | { kind: 'discovery'; title: string; lines: string[] };
+export interface Toast { id: number; kind: 'badge' | 'error' | 'info'; title: string; body?: string; icon?: string }
+
+export class UiStore {
+  overlay: Overlay = { kind: 'none' };
+  prompt: string | null = null;
+  toasts: Toast[] = [];
+  version = 0;
+  private nextId = 1;
+  private readonly listeners = new Set<() => void>();
+
+  setPrompt(p: string | null) { if (p !== this.prompt) { this.prompt = p; this.emit(); } }
+  open(o: Overlay) { this.overlay = o; this.emit(); }
+  close() { this.overlay = { kind: 'none' }; this.emit(); }
+  toast(t: Omit<Toast, 'id'>): number { const id = this.nextId++; this.toasts = [...this.toasts, { ...t, id }]; this.emit(); return id; }
+  dismiss(id: number) { this.toasts = this.toasts.filter((t) => t.id !== id); this.emit(); }
+  /** True while the world must not take input: an overlay is open or the engine is waiting on an event choice. */
+  isBlocking(): boolean { return this.overlay.kind !== 'none' || !!store.state?.activeEvent; }
+  subscribe(l: () => void) { this.listeners.add(l); return () => { this.listeners.delete(l); }; }
+  private emit() { this.version++; for (const l of this.listeners) l(); }
+}
+
+export const ui = new UiStore();

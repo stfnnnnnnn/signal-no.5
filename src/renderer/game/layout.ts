@@ -39,10 +39,10 @@ export const ANCHORS: Anchor[] = [
   { id: 'UTILITY_DRUM', tx: 4, ty: 16, sprite: 'water', size: 16 },
   { id: 'UTILITY_LADDER', tx: 8, ty: 16, sprite: null, size: 16 },
   { id: 'PET_AREA', tx: 9, ty: 9, sprite: null, size: 16 },
-  { id: 'ENTRANCE_DOOR', tx: 26, ty: 17, sprite: 'door', size: 32 },
+  { id: 'ENTRANCE_DOOR', tx: 26, ty: 17, sprite: 'door', size: 16 }, // wall-mounted: stays within the wall tile
   { id: 'ENTRANCE_BAG', tx: 28, ty: 9, sprite: 'bag', size: 16 },
   { id: 'STAIRS', tx: 28, ty: 15, sprite: null, size: 16 },
-  { id: 'WINDOW', tx: 17, ty: 17, sprite: 'window', size: 32 },
+  { id: 'WINDOW', tx: 17, ty: 17, sprite: 'window', size: 16 },        // wall-mounted: stays within the wall tile
 ];
 
 export const PLAYER_SPAWN = { tx: 17, ty: 12 };
@@ -63,3 +63,8 @@ export function solidTiles(grid: T[][], anchors: Anchor[] = ANCHORS): boolean[][
 }
 
 export const tileCenter = (tx: number, ty: number) => ({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 });
+
+/** Where an anchor's sprite is drawn (px): centred on its tile, standing on the tile's bottom edge. */
+export function anchorSpriteRect(a: Anchor): { x: number; y: number; w: number; h: number } {
+  return { x: a.tx * TILE + (TILE - a.size) / 2, y: (a.ty + 1) * TILE - a.size, w: a.size, h: a.size };
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { INTERACTABLES } from '../../src/core/content/interactables';
-import { ANCHORS, buildGrid, MAP_H, MAP_W, NPC_SPAWNS, PLAYER_SPAWN, solidTiles, T, tileCenter } from '../../src/renderer/game/layout';
+import { anchorSpriteRect, ANCHORS, buildGrid, MAP_H, MAP_W, NPC_SPAWNS, PLAYER_SPAWN, solidTiles, T, TILE, tileCenter } from '../../src/renderer/game/layout';
 import { INTERACT_RADIUS, nearestAnchor } from '../../src/renderer/game/proximity';
 
 const grid = buildGrid();
@@ -49,5 +49,22 @@ describe('house_fixed_v1 layout', () => {
     const beside = tileCenter(phone.tx - 1, phone.ty);
     expect(nearestAnchor(beside.x, beside.y, pts)).toBe('LIVING_PHONE');
     expect(nearestAnchor(beside.x - 3 * INTERACT_RADIUS, beside.y, pts)).not.toBe('LIVING_PHONE');
+  });
+
+  it('draws wall-mounted objects only over wall tiles, never over the walkway', () => {
+    for (const a of ANCHORS.filter((x) => grid[x.ty]![x.tx] === T.WALL)) {
+      const r = anchorSpriteRect(a);
+      for (let y = Math.floor(r.y / TILE); y < Math.ceil((r.y + r.h) / TILE); y++)
+        for (let x = Math.floor(r.x / TILE); x < Math.ceil((r.x + r.w) / TILE); x++)
+          expect(grid[y]?.[x] ?? T.WALL, `${a.id} covers (${x},${y})`).toBe(T.WALL);
+    }
+  });
+
+  it('stands floor objects on their own tile: sprite bottom = tile bottom, centred on the tile', () => {
+    for (const a of ANCHORS) {
+      const r = anchorSpriteRect(a);
+      expect(r.y + r.h).toBe((a.ty + 1) * TILE);
+      expect(r.x + r.w / 2).toBe(a.tx * TILE + TILE / 2);
+    }
   });
 });

@@ -6,3 +6,5 @@
 * { box-sizing: border-box; }
 html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font); }
 .boot { display: grid; place-items: center; height: 100%; color: var(--gold); letter-spacing: .2em; }
+.world { position: fixed; inset: 0; }
+.world canvas { image-rendering: pixelated; }
