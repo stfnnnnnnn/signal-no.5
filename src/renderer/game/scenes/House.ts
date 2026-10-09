@@ -8,6 +8,7 @@ import { ANCHORS, MAP_H, MAP_W, PLAYER_SPAWN, T, TILE, anchorSpriteRect, buildGr
 import { nearestAnchor } from '../proximity';
 import { acceptsInteractKey } from '../input';
 import { CHARACTER_FRAMES, charKey, itemKey, type Dir, type SpriteBase } from '../assets';
+import { tintFor } from '../palette';
 
 const SPEED = 90;
 type KeyName = 'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd';
@@ -49,6 +50,8 @@ export class House extends Phaser.Scene {
     const spawn = tileCenter(PLAYER_SPAWN.tx, PLAYER_SPAWN.ty);
     this.player = this.physics.add.sprite(spawn.x, spawn.y - 8, charKey(this.base), CHARACTER_FRAMES[this.base].idle.down[0]);
     this.player.body.setSize(12, 8).setOffset(10, 24);
+    const tint = playerCfg ? tintFor(playerCfg.paletteId, store.engine.getProfile().appearance.clothingColor) : null;
+    if (tint !== null) this.player.setTint(tint);
     this.player.setCollideWorldBounds(true);
     this.physics.world.setBounds(0, 0, MAP_W * TILE, MAP_H * TILE);
     this.physics.add.collider(this.player, layer);

@@ -1,5 +1,6 @@
 // The renderer's ONLY game state: one GameEngine per run. React and Phaser read from here and send commands here.
-import { createGame, type CommandResult, type EngineError, type EngineEvent, type GameEngine } from '../../core/engine';
+import { createGame, loadGame, startRun, type CommandResult, type EngineError, type EngineEvent, type GameEngine } from '../../core/engine';
+import type { HouseholdProfile } from '../../shared/contracts/household';
 import type { OnboardingInput } from '../../shared/contracts/onboarding';
 import type { GameState } from '../../shared/contracts/state';
 
@@ -24,6 +25,23 @@ export class EngineStore {
     if (!r.ok) return r;
     this.eng = r.engine; this.tickAcc = 0;
     this.apply(r.engine.getState(), r.events);
+    return { ok: true };
+  }
+
+  /** Same household, new storm (replay). */
+  startProfile(profile: HouseholdProfile, seed: number): { ok: true } {
+    const r = startRun(profile, { seed });
+    this.eng = r.engine; this.tickAcc = 0;
+    this.apply(r.engine.getState(), r.events);
+    return { ok: true };
+  }
+
+  /** Resume a saved GameState (validated and migrated by the engine). */
+  load(raw: unknown): { ok: true } | { ok: false; error: EngineError } {
+    const r = loadGame(raw);
+    if (!r.ok) return r;
+    this.eng = r.engine; this.tickAcc = 0;
+    this.apply(r.engine.getState(), []);
     return { ok: true };
   }
 

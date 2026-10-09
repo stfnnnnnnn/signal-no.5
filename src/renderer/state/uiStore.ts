@@ -17,6 +17,8 @@ export class UiStore {
   private nextId = 1;
   private readonly listeners = new Set<() => void>();
 
+  /** Clear everything presentational between runs. */
+  reset() { this.overlay = { kind: 'none' }; this.prompt = null; this.toasts = []; this.emit(); }
   setPrompt(p: string | null) { if (p !== this.prompt) { this.prompt = p; this.emit(); } }
   open(o: Overlay) { this.overlay = o; this.emit(); }
   close() { this.overlay = { kind: 'none' }; this.emit(); }
