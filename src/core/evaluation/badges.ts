@@ -21,7 +21,6 @@ function check(applicable: boolean, conds: [boolean, string][]): Check {
 export const requiredWindows = (s: GameState) => (s.household.housing.floors === 1 ? 2 : s.household.housing.floors === 2 ? 3 : 4);
 /** Badges that cannot be lost once their condition is met, so they are earned mid-run (B06: a completed, logged action). */
 const LOCKS_IN: ReadonlySet<BadgeId> = new Set(['B06']);
-const routeClosesAt = (s: GameState) => (s.storm.roadClosureEvent ? s.landfallMinute - 2 * H : s.landfallMinute);
 
 /** B08 rules: also referenced by Handa's evacuation/household-assistance requirement. */
 export function evaluateHouseholdSafety(s: GameState): BadgeResult {
@@ -59,7 +58,7 @@ const RULES: Record<Exclude<BadgeId, 'B01' | 'B08'>, (s: GameState) => Check> = 
   },
   B07: (s) => check(!s.completed || s.environment.evacuationAdvisoryIssued, [
     [s.evacuation.completed, 'The household did not reach the evacuation destination.'],
-    [s.evacuation.departedAtMinute !== null && s.evacuation.departedAtMinute <= routeClosesAt(s), 'The household left after the route became unsafe.'],
+    [s.evacuation.departedAtMinute !== null && s.evacuation.departedAtMinute <= sel.routeClosureMinute(s), 'The household left after the route became unsafe.'],
   ]),
   B09: (s) => check(true, [[c(s, 'hr_windows') >= requiredWindows(s), `Fewer than ${requiredWindows(s)} windows were protected before heavy rain.`]]),
   B10: (s) => check(sel.roofNeedsSecuring(s.household), [[c(s, 'hr_roof') === 1, 'Roof preparation was not completed before dangerous winds.']]),

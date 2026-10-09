@@ -2,6 +2,7 @@
 // Only clearly defined unsafe decisions are penalised, and only when the engine verifies the conditions AND a
 // safer alternative was available. No penalties for being outdoors, outages, lighting or exposure profiles.
 import type { GameState, Wellbeing } from '../shared/contracts/state';
+import * as sel from './selectors';
 
 export interface WellbeingRule { id: string; delta: number; reason: string; saferAlternative: string }
 
@@ -29,7 +30,7 @@ function apply(s: GameState, ruleId: string) {
 /** At the storm peak (after the authored flood level is set). */
 export function checkAtPeak(s: GameState) {
   const advisoryIgnored = s.environment.evacuationAdvisoryIssued && s.evacuation.departedAtMinute === null;
-  if (advisoryIgnored && s.evacuation.currentShelter === 'home' && s.environment.floodSeverity === 'severe') apply(s, 'W_ADVISORY_IGNORED_SEVERE_FLOOD');
+  if (advisoryIgnored && sel.householdLocation(s) === 'home' && s.environment.floodSeverity === 'severe') apply(s, 'W_ADVISORY_IGNORED_SEVERE_FLOOD');
 }
 
 /** After the player resolves the shelter-hazard event. */

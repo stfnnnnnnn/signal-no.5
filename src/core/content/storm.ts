@@ -88,11 +88,14 @@ export function milestones(s: GameState): Milestone[] {
       recordLandfallSnapshot(x);
       x.environment.weatherState = 'typhoon';
       x.environment.windSeverity = 'moderate';
-      x.environment.roadStatus = 'closed';
+      // Landfall alone does not close every route: without a road-closure event the road is restricted until the
+      // peak (sel.routeClosureMinute). Households already travelling keep travelling.
+      if (x.environment.roadStatus === 'open') x.environment.roadStatus = 'restricted';
       x.environment.shopOpen = false;
       if (x.environment.floodSeverity === 'none' && st.peakFloodSeverity !== 'none') x.environment.floodSeverity = 'low';
       x.phase = 'impact';
-      x.scene = x.evacuation.currentShelter === 'home' ? 'HOME_IMPACT' : 'EVACUATION';
+      const where = sel.householdLocation(x);
+      x.scene = where === 'home' ? 'HOME_IMPACT' : where === 'inTransit' ? 'STREET' : 'EVACUATION';
     } },
     { id: 'PEAK', minute: L + 3 * H, eventId: 'EV10', critical: true, apply: (x) => applyPeak(x) },
     { id: 'IMPACT_END', minute: L + 6 * H, eventId: 'EV13', apply: (x) => applyImpactEnd(x) },
@@ -147,7 +150,8 @@ function applyPeak(s: GameState) {
   env.floodSeverity = s.storm.peakFloodSeverity;
   env.windSeverity = s.storm.peakWindSeverity;
   if (env.floodSeverity === 'moderate' || env.floodSeverity === 'severe') env.tapWaterAvailable = false;
-  if (s.evacuation.currentShelter === 'home') {
+  if (s.clock.gameMinutes >= sel.routeClosureMinute(s)) env.roadStatus = 'closed';
+  if (sel.householdLocation(s) === 'home') {
     const p = s.household;
     const roofWeak = sel.roofNeedsSecuring(p) && !s.flags.ROOF_SECURED && env.windSeverity === 'severe';
     const floodBad = env.floodSeverity === 'severe' && p.housing.floors === 1;

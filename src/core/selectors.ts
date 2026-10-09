@@ -54,3 +54,11 @@ export const inPreLandfall = (s: GameState) => s.clock.gameMinutes < s.landfallM
 export const advisoryMinute = (s: GameState) => (s.storm.evacuationAdvisoryEvent ? s.landfallMinute - (8 + (s.storm.advisoryLeadHours ?? 0)) * HOUR : null);
 /** Heavy rain begins: outdoor work stops being safe. */
 export const heavyRainMinute = (s: GameState) => s.landfallMinute - 8 * HOUR;
+/** Scheduled minute the evacuation route closes: the road-closure event if this storm has one, else the storm peak. */
+export const routeClosureMinute = (s: GameState) => (s.storm.roadClosureEvent ? s.landfallMinute - 2 * HOUR : s.landfallMinute + 3 * HOUR);
+/** Where the household is: derived from the evacuation record, never stored separately. */
+export type HouseholdLocation = 'home' | 'inTransit' | 'evacuationCenter';
+export function householdLocation(s: GameState): HouseholdLocation {
+  if (s.evacuation.completed || s.evacuation.currentShelter === 'evacuationCenter') return 'evacuationCenter';
+  return s.evacuation.departedAtMinute !== null ? 'inTransit' : 'home';
+}

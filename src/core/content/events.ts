@@ -113,7 +113,7 @@ export const EVENTS: EventDef[] = [
       EV09__LIGHTING_GAP: { dialogue: 'The power is out and we have no flashlight. It is very dark in here.', description: 'The lights flicker and go dark.' },
     },
     facts: ({ s }) => ['The electricity is out.', sel.hasLighting(s) ? 'The household has backup lighting.' : 'The household has no backup lighting.'] },
-  { id: 'EV10', title: 'Shelter hazard', mandatory: true, eligible: ({ s }) => s.evacuation.currentShelter === 'home',
+  { id: 'EV10', title: 'Shelter hazard', mandatory: true, eligible: ({ s }) => sel.householdLocation(s) === 'home',
     variant: ({ s }) => (s.environment.shelterCondition === 'unsafe' ? 'EV10__CRITICAL' : s.environment.floodSeverity === 'severe' || s.environment.floodSeverity === 'moderate' ? 'EV10__WATER_RISING'
       : !s.flags.LOOSE_ITEMS_SECURED ? 'EV10__LOOSE_OBJECTS' : 'EV10__STRONG_WIND'),
     choices: ({ s }) => [ 'MOVE_TO_SAFER_ROOM', 'ACCOUNT_MEMBERS', ...(s.environment.shelterCondition !== 'normal' ? ['SEEK_HELP'] : []), 'GO_OUTSIDE_TO_CHECK'],

@@ -41,7 +41,8 @@ export function buildScenarioRequest(s: GameState): ScenarioAIRequest | null {
       availableItems: available.map((id) => ITEM_LABELS[id]),
       unavailableItems: ITEM_IDS.filter((id) => !available.includes(id) && id !== 'SANDBAGS' && id !== 'FUEL').map((id) => ITEM_LABELS[id]),
     },
-    facts: def.facts(c, ev.variantId),
+    // Location is authoritative: a household on the road must not be narrated as being at home.
+    facts: [...def.facts(c, ev.variantId), ...(sel.householdLocation(s) === 'inTransit' ? ['The household has left home and is travelling to the evacuation destination.'] : [])],
     recentDecisions: s.decisionLog.slice(-5).map((d) => ACTION_BY_ID.get(d.actionId)?.label ?? d.actionId),
     allowedVariantIds: [ev.variantId],
     allowedActionIds: [...ev.actionIds],

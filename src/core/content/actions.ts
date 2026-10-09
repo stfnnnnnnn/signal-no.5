@@ -91,6 +91,9 @@ const evacuationOpen: Requirement[] = [
   { test: ({ s }) => s.evacuation.departedAtMinute === null, reason: 'Your household has already left.' },
   preLandfall,
   { test: ({ s }) => s.environment.roadStatus !== 'closed', reason: 'The route is closed. Seek official assistance instead.' },
+  // The whole trip must fit before the scheduled route closure (not just the departure): no arriving on a closed road.
+  { test: ({ s, p }) => s.clock.gameMinutes + evacuationTravelMinutes(s, p) <= sel.routeClosureMinute(s),
+    reason: 'Too late to travel safely: the route is expected to close before you would arrive. Stay indoors in the safest room and follow official instructions.' },
   { test: ({ s, p }) => !sel.assistanceNeeded(p) || flag(s, 'ASSISTANCE_ARRANGED'), reason: 'Arrange help for the household member who needs assistance first.' },
 ];
 
