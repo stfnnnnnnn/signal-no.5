@@ -8,3 +8,16 @@ html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(-
 .boot { display: grid; place-items: center; height: 100%; color: var(--gold); letter-spacing: .2em; }
 .world { position: fixed; inset: 0; }
 .world canvas { image-rendering: pixelated; }
+.panel { background: var(--panel); border: 3px solid var(--gold); box-shadow: 0 0 0 3px var(--bg), 6px 6px 0 #000a; padding: 12px 14px; }
+.panel h2 { margin: 0 0 8px; font-size: 15px; color: var(--gold); letter-spacing: .05em; }
+.menu { position: fixed; right: 24px; top: 50%; transform: translateY(-50%); width: min(420px, 90vw); max-height: 80vh; overflow: auto; z-index: 10; }
+.menu ul { list-style: none; margin: 0 0 8px; padding: 0; }
+.menu li { margin: 0 0 6px; }
+button { font: inherit; color: var(--ink); background: var(--panel-2); border: 2px solid var(--sky); padding: 6px 10px; cursor: pointer; width: 100%; text-align: left; display: flex; justify-content: space-between; gap: 8px; }
+button:hover:not(:disabled), button:focus-visible { border-color: var(--gold); outline: none; background: #344061; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.ghost { border-color: var(--muted); justify-content: center; }
+.cost { color: var(--muted); white-space: nowrap; }
+.reason { margin: 2px 0 0 4px; font-size: 12px; color: var(--warn); }
+.unsafe { color: var(--danger); }
+.prompt { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--panel); border: 2px solid var(--gold); padding: 4px 12px; z-index: 5; }
