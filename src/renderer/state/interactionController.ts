@@ -4,10 +4,17 @@ import type { ActionOption, CommandResult } from '../../core/engine';
 import { ITEM_LABELS } from '../../core/content/items';
 import { missingGoBagItems } from '../../core/selectors';
 import type { ItemId } from '../../shared/contracts/ids';
+import type { ShopItemId } from '../../shared/contracts/state';
 import { store } from './engineStore';
 import { ui } from './uiStore';
 
 export function interactWith(id: string, label: string): void {
+  if (id === 'SHOP_COUNTER') { // the counter is UI only: the shop panel (prices and stock come from the engine)
+    if (store.state?.activeEvent) { ui.toast({ kind: 'error', title: 'Respond to the current event first.' }); return; }
+    store.dispatch((e) => e.pause('shop'));
+    ui.open({ kind: 'shop' });
+    return;
+  }
   const r = store.interact(id);
   if (!r.ok) { ui.toast({ kind: 'error', title: r.error.message, body: r.error.reasons?.join(' ') }); return; }
   if (r.events.some((e) => e.type === 'eventTriggered')) return; // EventDialog opens from state.activeEvent
@@ -18,7 +25,22 @@ export function interactWith(id: string, label: string): void {
 
 export function closeMenu(): void {
   ui.close();
-  if (store.state?.clock.pauseReasons.includes('menu')) store.dispatch((e) => e.resume('menu'));
+  for (const reason of ['menu', 'shop'] as const) if (store.state?.clock.pauseReasons.includes(reason)) store.dispatch((e) => e.resume(reason));
+}
+
+/** Inventory / objectives panels pause the clock like a menu. */
+export function openPanel(kind: 'inventory' | 'objectives'): void {
+  if (!store.state || store.state.activeEvent) return;
+  if (ui.overlay.kind !== 'none') closeMenu();
+  store.dispatch((e) => e.pause('menu'));
+  ui.open({ kind });
+}
+
+/** Buy through the engine; its error message is shown as is. Returns true when bought. */
+export function buy(item: ShopItemId, quantity: number): boolean {
+  const r = store.dispatch((e) => e.purchase(item, quantity));
+  if (!r.ok) ui.toast({ kind: 'error', title: r.error.message, body: r.error.reasons?.join(' ') });
+  return r.ok;
 }
 
 export function runMenuAction(option: ActionOption): CommandResult | null {

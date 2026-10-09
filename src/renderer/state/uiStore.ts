@@ -5,7 +5,8 @@ import { store } from './engineStore';
 export type Overlay =
   | { kind: 'none' }
   | { kind: 'menu'; interactableId: string; label: string; actions: ActionOption[] }
-  | { kind: 'discovery'; title: string; lines: string[] };
+  | { kind: 'discovery'; title: string; lines: string[] }
+  | { kind: 'shop' } | { kind: 'inventory' } | { kind: 'objectives' };
 export interface Toast { id: number; kind: 'badge' | 'error' | 'info'; title: string; body?: string; icon?: string }
 const TOAST_MS: Record<Toast['kind'], number> = { badge: 6000, error: 3500, info: 3500 };
 
