@@ -50,7 +50,7 @@ If the backend lacks something you need, raise it. Don't work around it in the U
 ```powershell
 npm install
 npm run dev        # Electron + Vite (hot reload) at http://localhost:5173 inside the app window
-npm test           # backend tests must stay green (162)
+npm test           # backend tests must stay green (185)
 npm run typecheck
 ```
 

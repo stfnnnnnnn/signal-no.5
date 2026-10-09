@@ -97,6 +97,8 @@ On interact, call `engine.interact(id)`. Then either open the event dialog or sh
 
 ## 9. Storm effects (GD §9, §12)
 
+**Render storm visuals from the `SceneDirective`** (`engine.getSceneDirective()`, optionally merged with an AI suggestion). It already maps the state below into weather, lighting, flood overlay, effects, props, NPC cues, audio and mood presets. Every preset and asset ID the frontend must provide is listed in [FRONTEND_BACKEND_CONTRACTS.md](../implementation/FRONTEND_BACKEND_CONTRACTS.md#asset-ids-the-frontend-must-provide). The raw state, for reference:
+
 | State (`environment.*`) | MVP visual |
 |---|---|
 | `weatherState`: clear / rain / heavyRain / typhoon | Rain overlay intensity; darker lighting at typhoon |

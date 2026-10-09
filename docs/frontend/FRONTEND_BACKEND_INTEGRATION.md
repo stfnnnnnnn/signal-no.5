@@ -245,6 +245,17 @@ startRun(profile: HouseholdProfile, opts: { seed: number; runId?: string }): { o
 
 Badges persist through `window.signal.badges`. Dialogue cached for the old `runId` simply goes unused.
 
+## 17b. Scene presentation (weather, lighting, props, NPC cues, audio)
+
+```ts
+engine.getSceneDirective(): SceneDirective                                        // sync, deterministic, idempotent
+buildSceneAIRequest(state: GameState): SceneAIRequest                             // sync (src/core/scene/directive.ts)
+window.signal.ai.suggestScene(req: SceneAIRequest, runId: string): Promise<SceneAISuggestion | null>  // async, optional, always resolves
+mergeSceneSuggestion(state: GameState, base: SceneDirective, s: SceneAISuggestion | null): SceneDirective  // sync; re-validates against the current state
+```
+
+The contract, authority rules, runtime flow and the full list of asset IDs are in **[FRONTEND_BACKEND_CONTRACTS.md](../implementation/FRONTEND_BACKEND_CONTRACTS.md#scene-directives-ai-directed-environmental-variation)**. Schemas: `SceneDirective`, `SceneAIRequest`, `SceneAISuggestion` (`src/shared/contracts/scene.ts`). The IPC channel is `ai:suggestScene`, Zod-validated in main. It rejects only on an invalid request or `runId`.
+
 ---
 
 ## 18. Known gaps

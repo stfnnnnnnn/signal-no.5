@@ -69,7 +69,7 @@ When two documents disagree:
 | [frontend/FRONTEND_GETTING_STARTED.md](frontend/FRONTEND_GETTING_STARTED.md) | Setup, mock data, first milestone, common mistakes | Frontend | Guide |
 | [frontend/FRONTEND_BACKEND_INTEGRATION.md](frontend/FRONTEND_BACKEND_INTEGRATION.md) | Every API call, with types, examples, errors and gaps | Frontend | Ref |
 | [frontend/UI_GAMEPLAY_REQUIREMENTS.md](frontend/UI_GAMEPLAY_REQUIREMENTS.md) | Scenes, sprites, HUD, overlays (MVP vs optional) | Frontend | Spec digest |
-| [implementation/FRONTEND_BACKEND_CONTRACTS.md](implementation/FRONTEND_BACKEND_CONTRACTS.md) | **Superseded** pointer to the integration reference | — | Superseded |
+| [implementation/FRONTEND_BACKEND_CONTRACTS.md](implementation/FRONTEND_BACKEND_CONTRACTS.md) | **Scene directive contract** (weather, lighting, flood, props, NPC cues, audio): authority rules, runtime flow, every asset ID the frontend must provide | Frontend (Phaser), backend | Ref |
 
 ## 10. Testing
 | Location | Description |
@@ -78,7 +78,7 @@ When two documents disagree:
 | `tests/main/*.test.ts` | Model-server manager (real child process + `fake-llama-server.mjs`), AI service (real HTTP fake model), save store (temp folders) |
 | `tests/helpers.ts`, `tests/fixtures/households.ts` | `newGame`, `playToEnd`, `resolveFirst`; `familySurvey()`, `aloneSurvey()` |
 
-Run with `npm test` (162 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
+Run with `npm test` (185 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
 
 ## 11. Packaging
 | Document | Description | Audience | Type |
@@ -98,5 +98,4 @@ These are summarised in [../README.md#known-limitations](../README.md#known-limi
 | Document | Status |
 |---|---|
 | [../instruction.md](../instruction.md) | Stage-A architecture research brief (completed; it still names Godot as preferred, which was later replaced by Phaser + Electron) |
-| [implementation/FRONTEND_BACKEND_CONTRACTS.md](implementation/FRONTEND_BACKEND_CONTRACTS.md) | Superseded by the frontend integration reference |
 | `spikes/poc-electron-llm/` | Throwaway proof of concept (Electron → llama-server), kept as evidence; not used by `src/` |

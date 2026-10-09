@@ -18,6 +18,7 @@ A **local language model** (llama.cpp + Qwen3, running on the same laptop) write
 | Typhoon events | EV01–EV16 on an authored timeline; the engine picks each event's variant from the household and state | `src/core/content/events.ts`, `storm.ts` |
 | Evacuation and aftermath | Advisory, assistance, route, travel, arrival, shelter-at-home hazards, authored damage, 3-day recovery | `src/core/content/*` |
 | Local AI narrative | Context builder, constrained JSON decoding, validation, grounding guard, reviewed fallback text | `src/core/ai/`, `src/main/ai/` |
+| Scene directives | Deterministic weather, lighting, flood, prop, NPC-cue and audio presets from state; optional AI atmospheric variations, validated and merged without overriding state | `src/core/scene/`, `src/shared/contracts/scene.ts` |
 | Scoring and badges | 6 weighted competencies (100 pts), endings Handa/Nakaraos/Nahirapan, Na-rescue overlay, badges B01–B10, lessons and checklist | `src/core/evaluation/`, `src/core/content/badges.ts`, `findings.ts` |
 | Desktop packaging | Electron app + llama.cpp runtime + one model as a portable folder with `SignalNo5.exe` | `src/main/`, `scripts/pack.mjs` |
 
@@ -48,7 +49,7 @@ Prerequisites: Windows 10/11 x64, Git, **Node.js ≥ 22.12** (Node 24 LTS recomm
 git clone <repository-url> "signal no.5"
 cd "signal no.5"
 npm install
-npm test            # 162 backend tests
+npm test            # 185 backend tests
 npm run typecheck   # tsc --noEmit
 npm run dev         # Electron + Vite dev server; opens the backend dev harness
 ```
