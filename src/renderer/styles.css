@@ -1,0 +1,8 @@
+:root {
+  --bg: #10141f; --panel: #1b2236; --panel-2: #2b3550; --ink: #e8e6d9; --muted: #9aa3b8;
+  --gold: #f2c14e; --sky: #9fd0ff; --ok: #5fb36a; --warn: #d9734e; --danger: #e05561;
+  --font: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font); }
+.boot { display: grid; place-items: center; height: 100%; color: var(--gold); letter-spacing: .2em; }
