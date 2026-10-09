@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { buildScenarioRequest } from '../../core/ai/scenario';
 import { EVENT_BY_ID } from '../../core/content/events';
 import type { ScenarioContent } from '../../shared/contracts/ai';
-import { scenarioForCurrentEvent } from '../services/ai';
+import { narrateEvent } from '../services/ai';
 import { store } from '../state/engineStore';
 import { useEngineState } from '../state/hooks';
 import { ui } from '../state/uiStore';
@@ -17,14 +17,12 @@ export function EventDialog() {
   // Focus the panel, not a choice: a key held or pressed for the world must never commit a scored decision.
   useEffect(() => { panel.current?.focus(); }, [key]);
 
-  useEffect(() => { // once per event occurrence (blueprint §7)
+  useEffect(() => { // once per event occurrence (blueprint §7); a cold-start fallback upgrades to AI text when ready
     const st = store.state;
     if (!key || !st) return;
     const req = buildScenarioRequest(st);
     if (!req) return;
-    let live = true;
-    void scenarioForCurrentEvent(req, st.runId, key, () => store.activeEventKey()).then((c) => { if (live && c) setContent({ key, c }); });
-    return () => { live = false; };
+    return narrateEvent(req, st.runId, key, () => store.activeEventKey(), (c) => setContent({ key, c }));
   }, [key]);
 
   if (!ev || !key) return null;

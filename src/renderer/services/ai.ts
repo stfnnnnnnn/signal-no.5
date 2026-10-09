@@ -6,7 +6,10 @@ import type { ScenarioAIRequest, ScenarioContent } from '../../shared/contracts/
 const cache = new Map<string, Promise<ScenarioContent>>();
 const bridge = () => (typeof window !== 'undefined' ? window.signal : undefined);
 
-/** AI text for one event occurrence (`key` = eventId@triggeredAtMinute); one model call per key, fallback on any failure. */
+/**
+ * AI text for one event occurrence (`key` = eventId@triggeredAtMinute), fallback on any failure. Concurrent calls
+ * share one request; only AI results stay cached, so a fallback (e.g. model not ready yet) can be retried later.
+ */
 export function requestScenario(req: ScenarioAIRequest, runId: string, key: string): Promise<ScenarioContent> {
   const k = `${runId}:${key}`;
   let p = cache.get(k);
@@ -15,6 +18,7 @@ export function requestScenario(req: ScenarioAIRequest, runId: string, key: stri
     p = ai ? ai.generateScenario(req, runId).catch(() => fallbackFromRequest(req, 'bridge-error'))
       : Promise.resolve(fallbackFromRequest(req, 'no-bridge'));
     cache.set(k, p);
+    void p.then((c) => { if (c.source !== 'ai' && cache.get(k) === p) cache.delete(k); });
   }
   return p;
 }
@@ -23,6 +27,35 @@ export function requestScenario(req: ScenarioAIRequest, runId: string, key: stri
 export async function scenarioForCurrentEvent(req: ScenarioAIRequest, runId: string, key: string, currentKey: () => string | null): Promise<ScenarioContent | null> {
   const c = await requestScenario(req, runId, key);
   return currentKey() === key ? c : null;
+}
+
+/** The only fallback worth retrying: the model was not ready yet (cold start). Invalid output is never retried. */
+const RETRY_WHEN_READY = 'model-unavailable';
+
+/**
+ * Narration for the open event, never blocking play: shows whatever arrives first (reviewed fallback on a cold
+ * start), then, if that fallback was only because the model was still starting, asks once more when the model
+ * reports `ready` and shows the AI text if this event is still open. Returns a cancel function.
+ */
+export function narrateEvent(req: ScenarioAIRequest, runId: string, key: string, currentKey: () => string | null,
+  onContent: (c: ScenarioContent) => void): () => void {
+  let live = true;
+  let unsubscribe: (() => void) | null = null;
+  const stopListening = () => { unsubscribe?.(); unsubscribe = null; };
+  const retry = () => {
+    stopListening();
+    if (!live || currentKey() !== key) return;
+    void scenarioForCurrentEvent(req, runId, key, currentKey).then((c) => { if (live && c?.source === 'ai') onContent(c); });
+  };
+  void scenarioForCurrentEvent(req, runId, key, currentKey).then((c) => {
+    if (!live || !c) return;
+    onContent(c);
+    const ai = bridge()?.ai;
+    if (!ai || c.source !== 'fallback' || c.fallbackReason !== RETRY_WHEN_READY) return;
+    unsubscribe = ai.onStatus((s) => { if (s === 'ready') retry(); else if (s === 'unavailable' || s === 'stopped') stopListening(); });
+    void ai.status().then((s) => { if (s === 'ready' && unsubscribe) retry(); }, () => {}); // became ready meanwhile
+  });
+  return () => { live = false; stopListening(); };
 }
 
 export function clearScenarioCache() { cache.clear(); }
