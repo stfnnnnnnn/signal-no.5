@@ -60,5 +60,10 @@ export const HouseholdProfile = z.object({
   theme: ThemeId,
   budgetTier: BudgetTier,
   appearance: z.object({ choice: z.enum(['auto', 'customColor', 'randomize']), clothingColor: z.string().nullable() }),
+  /** Onboarding v2 (defaults keep older saved profiles loadable). */
+  configMode: z.enum(['custom', 'random']).default('custom'),
+  /** Fictional environmental exposure driving storm difficulty (never a real flood-risk prediction). */
+  exposure: z.enum(['standard', 'waterway', 'floodProne', 'both', 'unknown']).default('unknown'),
+  scenarioPreference: z.enum(['surprise', 'balanced', 'challenging']).nullable().default(null),
 });
 export type HouseholdProfile = z.infer<typeof HouseholdProfile>;

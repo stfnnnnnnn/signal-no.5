@@ -10,7 +10,7 @@ function emptyGrid(): AgeGrid {
   return Object.fromEntries(AGE_GROUPS.map((g) => [g, { male: 0, female: 0, unspecified: 0 }])) as AgeGrid;
 }
 
-function composition(rng: Rng): Section {
+export function composition(rng: Rng): Section {
   const range = rng.weighted<HouseholdSizeRange>([['1', 10], ['2', 15], ['3-4', 40], ['5-6', 25], ['7+', 10]]);
   const [lo, hi] = SIZE_RANGE_BOUNDS[range];
   const size = rng.int(lo, Math.min(hi, 8));
@@ -27,7 +27,7 @@ function composition(rng: Rng): Section {
   };
 }
 
-function housing(rng: Rng): Section {
+export function housing(rng: Rng): Section {
   return {
     q6Housing: rng.weighted([['detached', 40], ['townhouse', 20], ['apartment', 20], ['condominium', 8], ['informal', 12]] as const),
     q7Floors: rng.weighted([['1', 55], ['2', 35], ['3+', 10]] as const),
@@ -38,7 +38,7 @@ function housing(rng: Rng): Section {
   };
 }
 
-function medical(rng: Rng): Section {
+export function medical(rng: Rng): Section {
   const condition = rng.chance(0.3);
   const allergies = rng.chance(0.15);
   return {
@@ -52,7 +52,7 @@ function medical(rng: Rng): Section {
   };
 }
 
-function preparedness(rng: Rng): Section {
+export function preparedness(rng: Rng): Section {
   const pool = ['water', 'food', 'flashlight', 'batteries', 'powerBank', 'radio', 'firstAidKit', 'hygiene', 'documentsWaterproof', 'emergencyCash', 'whistle', 'clothing'] as const;
   const supplies = pool.filter(() => rng.chance(0.4));
   return {

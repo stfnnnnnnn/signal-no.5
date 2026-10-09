@@ -90,6 +90,32 @@ export function buildHouseholdProfile(input: SurveyResponses, opts: { seed: numb
     theme: s.q26Theme!,
     budgetTier: s.budgetTier ?? 'moderate',
     appearance: { choice: s.q25Appearance, clothingColor: s.q25ClothingColor ?? null },
+    configMode: s.q3Mode === 'actual' ? 'custom' : 'random',
+    exposure: legacyExposure(s),
+    scenarioPreference: null,
   };
   return { ok: true, profile };
+}
+
+/** Exposure for the legacy 26-question survey (surroundings + flood history). */
+function legacyExposure(s: ParsedSurvey): HouseholdProfile['exposure'] {
+  const hist = s.q9FloodHistory === 'occasionally' || s.q9FloodHistory === 'frequently';
+  switch (s.q8Surroundings) {
+    case 'coastal': case 'waterway': return hist ? 'both' : 'waterway';
+    case 'lowLying': return 'floodProne';
+    case 'notSure': return 'unknown';
+    default: return hist ? 'floodProne' : 'standard';
+  }
+}
+
+/** Make `memberId` the player and recompute the (≤3, non-dependent) visible NPCs. */
+export function assignPlayer(p: HouseholdProfile, memberId: string): HouseholdProfile {
+  let shown = 0;
+  const members = p.members.map((m) => {
+    const isPlayer = m.id === memberId;
+    const visibleNpc = !isPlayer && !m.dependent && shown < MAX_VISIBLE_NPCS;
+    if (visibleNpc) shown++;
+    return { ...m, isPlayer, visibleNpc, npcId: visibleNpc ? `NPC_${m.id}` : null };
+  });
+  return { ...p, members, playerMemberId: memberId };
 }

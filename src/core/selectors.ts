@@ -16,7 +16,8 @@ export const usesPoweredEquipment = (p: HouseholdProfile) => p.medical.equipment
 export const hasMedicalEquipment = (p: HouseholdProfile) => p.medical.equipment.some((e) => !['none', 'notSure', 'preferNotToSay'].includes(e));
 export const floodProne = (p: HouseholdProfile) =>
   ['coastal', 'waterway', 'lowLying'].includes(p.housing.surroundings) || ['occasionally', 'frequently'].includes(p.housing.floodHistory);
-export const roofNeedsSecuring = (p: HouseholdProfile) => p.housing.roof !== 'concrete';
+/** Only a known non-concrete roof makes roof preparation applicable; an unknown roof is not assumed to need it. */
+export const roofNeedsSecuring = (p: HouseholdProfile) => ['metal', 'lightweight', 'tile', 'other'].includes(p.housing.roof);
 
 /** Workbook planning baselines (game assumptions, not prescriptions): 12 L and 3 person-days per member. */
 export const waterRequirement = (p: HouseholdProfile) => 12 * p.size;

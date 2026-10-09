@@ -10,6 +10,8 @@ import { INTERACTABLE_BY_ID, INTERACTABLES } from './content/interactables';
 import { SHOP_CONFIG, SHOP_ITEM_BY_ID } from './content/shop';
 import { milestones } from './content/storm';
 import { buildHouseholdProfile, type ValidationIssue } from './household/buildProfile';
+import { buildFromOnboarding, isOnboardingInput } from './household/onboarding';
+import type { OnboardingInput } from '../shared/contracts/onboarding';
 import { createInitialState } from './init/initialState';
 import { deriveSeed } from './rng';
 import { buildSceneDirective } from './scene/directive';
@@ -348,8 +350,13 @@ export class GameEngine {
 
 export interface CreateOptions { seed: number; runId?: string }
 
-export function createGame(responses: SurveyResponses, opts: CreateOptions): { ok: true; engine: GameEngine; events: EngineEvent[] } | { ok: false; error: EngineError } {
-  const built = buildHouseholdProfile(responses, { seed: deriveSeed(opts.seed, 'profile') });
+/**
+ * Start a new game from onboarding v2 (custom 8 questions or random 4 steps) or, deprecated, the legacy
+ * 26-question SurveyResponses.
+ */
+export function createGame(responses: OnboardingInput | SurveyResponses, opts: CreateOptions): { ok: true; engine: GameEngine; events: EngineEvent[] } | { ok: false; error: EngineError } {
+  const seed = deriveSeed(opts.seed, 'profile');
+  const built = isOnboardingInput(responses) ? buildFromOnboarding(responses, seed) : buildHouseholdProfile(responses, { seed });
   if (!built.ok) return fail('INVALID_SURVEY', 'The household survey has invalid or missing answers.', { issues: built.issues });
   return startRun(built.profile, opts);
 }
