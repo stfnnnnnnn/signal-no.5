@@ -12,6 +12,8 @@ import { milestones } from './content/storm';
 import { buildHouseholdProfile, type ValidationIssue } from './household/buildProfile';
 import { createInitialState } from './init/initialState';
 import { deriveSeed } from './rng';
+import { buildSceneDirective } from './scene/directive';
+import type { SceneDirective } from '../shared/contracts/scene';
 import * as sel from './selectors';
 
 // ---------- public types ----------
@@ -209,6 +211,9 @@ export class GameEngine {
     this.state = draft;
     return { ok: true, state: this.getState(), events: [{ type: 'purchaseCompleted', shopItemId, quantity, total }] };
   }
+
+  /** Deterministic scene presentation for the current state (weather, lighting, flood, props, cues, audio). */
+  getSceneDirective(): SceneDirective { return buildSceneDirective(this.state); }
 
   /** Shop catalog for the purchase UI: only items stocked for this household, with current prices. */
   getShopCatalog(): ShopCatalogEntry[] {

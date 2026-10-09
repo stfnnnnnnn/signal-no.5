@@ -3,6 +3,7 @@
 import type { DebriefNarrationRequest, ScenarioAIRequest, ScenarioContent } from './contracts/ai';
 import type { DebriefEvaluation, DebriefNarration } from './contracts/debrief';
 import type { HouseholdProfile } from './contracts/household';
+import type { SceneAIRequest, SceneAISuggestion } from './contracts/scene';
 import type { GameState } from './contracts/state';
 
 export type AiStatus = 'starting' | 'warming' | 'ready' | 'unavailable' | 'stopped';
@@ -23,6 +24,8 @@ export interface SignalBridge {
     /** Always resolves: AI content (`source:'ai'`) or reviewed fallback (`source:'fallback'`). */
     generateScenario(request: ScenarioAIRequest, runId: string): Promise<ScenarioContent>;
     narrateDebrief(evaluation: DebriefEvaluation, request: DebriefNarrationRequest): Promise<DebriefNarration & { source: 'ai' | 'fallback' }>;
+    /** Optional scene variation; null = keep the deterministic directive. Merge with mergeSceneSuggestion(). */
+    suggestScene(request: SceneAIRequest, runId: string): Promise<SceneAISuggestion | null>;
   };
   save: {
     write(slot: string, state: GameState): Promise<void>;
@@ -40,7 +43,7 @@ declare global {
 }
 
 export const IPC = {
-  aiStatus: 'ai:status', aiStatusChanged: 'ai:status-changed', aiGenerate: 'ai:generateScenario', aiNarrate: 'ai:narrateDebrief',
+  aiStatus: 'ai:status', aiStatusChanged: 'ai:status-changed', aiGenerate: 'ai:generateScenario', aiNarrate: 'ai:narrateDebrief', aiScene: 'ai:suggestScene',
   saveWrite: 'save:write', saveRead: 'save:read', saveList: 'save:list', saveRemove: 'save:remove',
   badgesRead: 'badges:read', badgesAdd: 'badges:add',
   profileWrite: 'profile:write', profileRead: 'profile:read', profileRemove: 'profile:remove',

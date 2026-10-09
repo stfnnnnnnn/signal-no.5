@@ -5,6 +5,7 @@ import { AIService } from '../../src/main/ai/aiService';
 import { buildScenarioRequest } from '../../src/core/ai/scenario';
 import { evaluateRun } from '../../src/core/evaluation/evaluate';
 import { buildDebriefRequest } from '../../src/core/ai/debrief';
+import { buildSceneAIRequest } from '../../src/core/scene/directive';
 import type { ScenarioAIRequest } from '../../src/shared/contracts/ai';
 import { aloneSurvey } from '../fixtures/households';
 import { newGame, playToEnd } from '../helpers';
@@ -129,6 +130,30 @@ describe('AIService debrief narration', () => {
     const out = await svc(m.url).narrateDebrief(ev, dreq);
     expect(out.source).toBe('fallback');
     expect(out.summary).toContain(String(ev.score));
+  });
+});
+
+describe('AIService scene suggestions', () => {
+  const st = newGame(aloneSurvey()).getState();
+  const sreq = buildSceneAIRequest(st);
+
+  it('returns a validated suggestion and sends a constrained schema', async () => {
+    const m = await fakeModel(() => ({ content: JSON.stringify({ basisKey: sreq.basisKey, mood: sreq.allowed.moods[0], extraEffects: sreq.allowed.extraEffects.slice(0, 1) }) }));
+    const out = await svc(m.url).suggestScene(sreq, 'run1');
+    expect(out).not.toBeNull();
+    expect(out!.basisKey).toBe(sreq.basisKey);
+    const schema = m.bodies[0].response_format.json_schema.schema;
+    expect(schema.properties.basisKey.const).toBe(sreq.basisKey);
+    expect(schema.properties.mood.enum).toEqual(sreq.allowed.moods);
+  });
+
+  it('returns null (deterministic fallback) for a suggestion that contradicts the state', async () => {
+    const m = await fakeModel(() => ({ content: JSON.stringify({ basisKey: sreq.basisKey, lighting: 'outageDark' }) })); // power is on
+    expect(await svc(m.url, { retries: 0 }).suggestScene(sreq, 'run1')).toBeNull();
+  });
+
+  it('returns null without a model and never throws', async () => {
+    expect(await svc(null).suggestScene(sreq, 'run1')).toBeNull();
   });
 });
 

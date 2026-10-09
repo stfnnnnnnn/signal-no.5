@@ -99,6 +99,13 @@ async function runSelfTest(ai: AIService, store: SaveStore, startup: Record<stri
     const ev = evaluateRun(st);
     const n = await ai.narrateDebrief(ev, buildDebriefRequest(ev, st));
     out.debriefSource = n.source;
+    const { buildSceneAIRequest, buildSceneDirective, mergeSceneSuggestion } = await import('../core/scene/directive');
+    const sreq = buildSceneAIRequest(st);
+    const ts = Date.now();
+    const sugg = await ai.suggestScene(sreq, `selftest-${label}`);
+    const merged = mergeSceneSuggestion(st, buildSceneDirective(st), sugg);
+    (out.scenes ??= [] as unknown[]);
+    (out.scenes as unknown[]).push({ label, ms: Date.now() - ts, suggested: sugg, mergedSource: merged.source, lighting: merged.lighting, mood: merged.mood });
   }
   const file = path.join(app.getPath('userData'), 'selftest.json');
   await writeFile(file, JSON.stringify(out, null, 2));

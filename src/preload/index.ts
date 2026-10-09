@@ -12,6 +12,7 @@ const bridge: SignalBridge = {
     },
     generateScenario: (request, runId) => ipcRenderer.invoke(IPC.aiGenerate, request, runId),
     narrateDebrief: (evaluation, request) => ipcRenderer.invoke(IPC.aiNarrate, evaluation, request),
+    suggestScene: (request, runId) => ipcRenderer.invoke(IPC.aiScene, request, runId),
   },
   save: {
     write: (slot, state) => ipcRenderer.invoke(IPC.saveWrite, slot, state),

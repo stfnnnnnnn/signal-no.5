@@ -5,6 +5,7 @@ import { DebriefNarrationRequest, ScenarioAIRequest } from '../shared/contracts/
 import { DebriefEvaluation } from '../shared/contracts/debrief';
 import { BadgeId } from '../shared/contracts/ids';
 import { HouseholdProfile } from '../shared/contracts/household';
+import { SceneAIRequest } from '../shared/contracts/scene';
 import { GameState } from '../shared/contracts/state';
 import { IPC, type AiStatus, type AppInfo } from '../shared/bridge';
 import type { AIService } from './ai/aiService';
@@ -26,6 +27,8 @@ export function registerIpc(d: IpcDeps) {
     d.ai.generateScenario(ScenarioAIRequest.parse(request), RunId.parse(runId)));
   ipcMain.handle(IPC.aiNarrate, (_e, evaluation: unknown, request: unknown) =>
     d.ai.narrateDebrief(DebriefEvaluation.parse(evaluation), DebriefNarrationRequest.parse(request)));
+  ipcMain.handle(IPC.aiScene, (_e, request: unknown, runId: unknown) =>
+    d.ai.suggestScene(SceneAIRequest.parse(request), RunId.parse(runId)));
   ipcMain.handle(IPC.saveWrite, (_e, slot: unknown, state: unknown) => d.store.writeGame(Slot.parse(slot), GameState.parse(state)));
   ipcMain.handle(IPC.saveRead, (_e, slot: unknown) => d.store.readGame(Slot.parse(slot)));
   ipcMain.handle(IPC.saveList, () => d.store.listGames());

@@ -5,6 +5,9 @@ import { debriefJsonSchema, fallbackDebriefNarration, validateDebriefNarration }
 import { fallbackFromRequest, scenarioResponseJsonSchema, validateScenarioResponse } from '../../core/ai/scenario';
 import type { DebriefNarrationRequest, ScenarioAIRequest, ScenarioContent } from '../../shared/contracts/ai';
 import type { DebriefEvaluation, DebriefNarration } from '../../shared/contracts/debrief';
+import type { SceneAIRequest, SceneAISuggestion } from '../../shared/contracts/scene';
+import { buildScenePromptMessages, sceneSuggestionJsonSchema } from '../../core/scene/ai';
+import { validateSceneSuggestion } from '../../core/scene/directive';
 
 export interface AIServiceOptions {
   /** Current endpoint, or null when the model server is not ready. */
@@ -20,6 +23,7 @@ export type NarrationOut = DebriefNarration & { source: 'ai' | 'fallback'; fallb
 export class AIService {
   private readonly o: Required<Omit<AIServiceOptions, 'endpoint'>> & Pick<AIServiceOptions, 'endpoint'>;
   private cache = new Map<string, ScenarioContent>();
+  private sceneCache = new Map<string, SceneAISuggestion>();
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(opts: AIServiceOptions) {
@@ -87,6 +91,29 @@ export class AIService {
     });
   }
 
+  /**
+   * Optional atmospheric scene variation. Resolves with a validated suggestion, or null (use the deterministic
+   * directive). Never throws; the renderer re-validates against the current state when merging.
+   */
+  suggestScene(req: SceneAIRequest, runId: string): Promise<SceneAISuggestion | null> {
+    const key = `${runId}:scene:${req.basisKey}`;
+    if (this.sceneCache.has(key)) return Promise.resolve(this.sceneCache.get(key)!);
+    return this.serial(async () => {
+      if (!this.o.endpoint()) return null;
+      for (let attempt = 0; attempt <= this.o.retries; attempt++) {
+        try {
+          const raw = await this.chat(buildScenePromptMessages(req), sceneSuggestionJsonSchema(req), 160);
+          const v = validateSceneSuggestion(req, raw);
+          if (v.ok) { this.sceneCache.set(key, v.suggestion); return v.suggestion; }
+        } catch (e) {
+          const name = e instanceof Error ? e.name : '';
+          if (name === 'TimeoutError' || name === 'AbortError') break;
+        }
+      }
+      return null;
+    });
+  }
+
   /** One tiny request during the loading screen absorbs the first-request warm-up (measured ~20 s once). */
   warmUp(): Promise<{ ok: boolean; ms: number; error?: string }> {
     return this.serial(async () => {
@@ -99,7 +126,8 @@ export class AIService {
   }
 
   clearCache(runId?: string) {
-    if (!runId) { this.cache.clear(); return; }
+    if (!runId) { this.cache.clear(); this.sceneCache.clear(); return; }
     for (const k of this.cache.keys()) if (k.startsWith(`${runId}:`)) this.cache.delete(k);
+    for (const k of this.sceneCache.keys()) if (k.startsWith(`${runId}:`)) this.sceneCache.delete(k);
   }
 }
