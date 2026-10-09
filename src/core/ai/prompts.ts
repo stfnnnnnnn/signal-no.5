@@ -10,6 +10,8 @@ const SCENARIO_SYSTEM = [
   '- Use only the facts, household members and items given. Mention no other people, places, items, organisations or services.',
   '- Never state forecasts, warning levels, advisory contents, evacuation destinations, phone numbers, websites, medical instructions or safety guarantees.',
   '- Do not tell the player what to do; the choices are shown separately.',
+  '- Timing: if state.hoursToLandfall is null the timing is unknown; never give hours or days until landfall, say conditions are expected to worsen. Never describe landfall as having happened before it has.',
+  '- Describe flooding, power and where the household is only as given in state (floodSeverity, powerAvailable, location). Never mention storm surge, a basement, attic, rooftop or safe room, and never say anyone is trapped.',
   '- The home of the player is exactly household.homeDescription. Call it that, or simply "home" or "house". Never call it an apartment, condominium or townhouse unless that is the homeDescription, and never give it a different number of floors.',
   '- Calm, empathetic, plain English. Dialogue at most 170 characters; description at most 140 characters, one sentence.',
   'Reply with JSON only: {"schemaVersion":1,"eventId","variantId" (copy it),"speaker" (one of allowedSpeakers),"dialogue","description","actionIds" (copy allowedActionIds exactly, same order)}.',

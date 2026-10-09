@@ -24,7 +24,11 @@ export const ScenarioAIRequest = z.object({
     theme: z.string(),
   }),
   state: z.object({
-    hoursToLandfall: z.number(),
+    /** null while the game keeps landfall timing hidden from the player (environment.landfallRevealed). */
+    hoursToLandfall: z.number().nullable(),
+    landfallRevealed: z.boolean().optional(),
+    floodSeverity: z.string().optional(),
+    location: z.enum(['home', 'inTransit', 'evacuationCenter']).optional(),
     weather: z.string(),
     powerAvailable: z.boolean(),
     goBag: z.string(),

@@ -10,6 +10,8 @@ export interface GuardContext {
   placesAllowed: boolean;
   /** The configured home; when given, text that describes a different dwelling is rejected. */
   home?: HomeFacts;
+  /** Scenario facts; when given, hazard, location and timing claims are checked against them. */
+  scene?: ScenarioFacts;
 }
 
 const ALWAYS_FORBIDDEN: [RegExp, string][] = [
@@ -40,13 +42,13 @@ export function checkGrounding(text: string, g: GuardContext): string | null {
   if (!g.placesAllowed && PLACES.test(text)) return 'invented-place';
   if (g.livesAlone && FAMILY.test(text)) return 'invented-household-member';
   for (const [re, item] of ITEM_WORDS) if (re.test(text) && !g.allowedItems.has(item)) return `unavailable-item:${item}`;
-  return g.home ? checkHousing(text, g.home) : null;
+  return (g.home ? checkHousing(text, g.home) : null) ?? checkStructure(text) ?? checkHazards(text, g.scene) ?? (g.scene ? checkTiming(text, g.scene) : null);
 }
 
 /** Simpler guard for debrief narration (no inventory context). */
 export function checkNarration(text: string, home?: HomeFacts): string | null {
   for (const [re, why] of ALWAYS_FORBIDDEN) if (why !== 'invented-resource' && re.test(text)) return why;
-  return home ? checkHousing(text, home) : null;
+  return (home ? checkHousing(text, home) : null) ?? checkStructure(text) ?? checkHazards(text);
 }
 
 // ---------- housing ----------
@@ -86,5 +88,76 @@ export function checkHousing(text: string, h: HomeFacts): string | null {
   for (const [re, kind] of DWELLINGS) if (kind !== h.type && firstHomeMention(text, re)) return `housing:${kind}`;
   const wrongFloors = h.floors <= 1 ? [TWO_FLOORS, UPPER_FLOOR, MULTI_FLOORS] : h.floors === 2 ? [ONE_FLOOR, MULTI_FLOORS] : [ONE_FLOOR, TWO_FLOORS];
   for (const re of wrongFloors) if (firstHomeMention(text, re)) return 'housing:floors';
+  return null;
+}
+
+// ---------- scenario: structure, hazards, location, timing ----------
+/** Deterministic scenario facts the narration must not contradict (all taken from the AI request). */
+export interface ScenarioFacts {
+  landfallRevealed: boolean;
+  /** Hours until landfall, or null while the game keeps the timing hidden from the player. */
+  hoursToLandfall: number | null;
+  /** Engine flood severity ('none' | 'low' | 'moderate' | 'severe'), or undefined when unknown (older requests). */
+  floodSeverity?: string;
+  powerAvailable: boolean;
+  location: 'home' | 'inTransit' | 'evacuationCenter';
+}
+
+const sentencesOf = (text: string) => text.split(/(?<=[.!?])\s+/).filter(Boolean);
+/** The sentence is about this household or this place (as opposed to general education or somewhere else). */
+const HOUSEHOLD_REF = /\b(you|your|we|we're|us|our|ours|the house|the home|this house|home|here|the street|the yard|the first floor|the family|everyone)\b/i;
+const aboutHousehold = (sentence: string) => HOUSEHOLD_REF.test(sentence) && !ELSEWHERE.test(sentence.slice(0, sentence.search(HOUSEHOLD_REF) + 40));
+
+/** Parts no supported home has (every home is a single-, two- or multi-story house on the fixed floor plan). */
+const STRUCTURES: [RegExp, string][] = [
+  [/\bbasements?\b/gi, 'basement'], [/\b(attics?|lofts?)\b/gi, 'attic'], [/\broof ?tops?\b/gi, 'rooftop'],
+  [/\b(storm )?cellars?\b|\bbunkers?\b|\bsafe ?rooms?\b|\bpanic rooms?\b/gi, 'shelter-room'],
+];
+export function checkStructure(text: string): string | null {
+  for (const [re, kind] of STRUCTURES) if (firstHomeMention(text, re)) return `structure:${kind}`;
+  return null;
+}
+
+const SURGE = /\bstorm surges?\b/i;
+const TRAPPED = /\b(trapped|stranded)\b/i;
+const FLOODED_NOW = [
+  /\b(water|floodwaters?|flood ?water)s? (is|are|has|have) (already |now )?(inside|in the (house|home|living room|kitchen|bedroom)|entered|coming in(to)?|seeping in)\b/i,
+  /\b(house|home|living room|kitchen|bedroom|floor|street|yard|room)s? (is|are) (already |now )?(flooded|flooding|under ?water)\b/i,
+  /\bwe('re| are) (flooded|under ?water)\b/i,
+];
+const POWER_OUT = /\b(power|electricity|lights?)('s| is| are| has| have| went)( (already|now|just))?( gone)? (out|off|down|cut)\b/i;
+const AT_HOME = /\b(we('re| are)|you('re| are)|everyone('s| is)|the family is)( still)? (at home|inside the house|in the house|home)\b/i;
+
+/** Claims about the household's current situation must match the engine (general education is allowed). */
+export function checkHazards(text: string, f?: ScenarioFacts): string | null {
+  for (const s of sentencesOf(text)) {
+    if (SURGE.test(s) && aboutHousehold(s)) return 'hazard:storm-surge'; // the game has no storm surge
+    if (TRAPPED.test(s) && aboutHousehold(s)) return 'hazard:trapped';    // the game never traps the household
+    if (!f) continue;
+    if (f.floodSeverity === 'none' && FLOODED_NOW.some((re) => re.test(s))) return 'hazard:flooding';
+    if (f.powerAvailable && POWER_OUT.test(s)) return 'hazard:power';
+    if (f.location !== 'home' && AT_HOME.test(s)) return `location:${f.location}`;
+  }
+  return null;
+}
+
+const STORM_CONTEXT = /\b(typhoon|storm|landfall|rain|water|flood\w*|winds?|hits?|strikes?|arriv\w*|coming|comes|rises?|reach\w*)\b/i;
+const WORD_NUMBERS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, twelve: 12, 'twenty-four': 24, 'twenty four': 24, 'forty-eight': 48, 'forty eight': 48 };
+const COUNTDOWN = /\b(\d{1,3}|one|two|three|four|five|six|twelve|twenty[- ]four|forty[- ]eight)\s+(more\s+)?(hours?|hrs?|days?)\b/gi;
+const LANDFALL_HAPPENED = /\b(has|have|had) (already |now |just )?(made landfall|hit|struck|arrived)\b|\bis (now |already )?(hitting|making landfall)\b/i;
+
+/** No countdown while timing is hidden; once revealed it must match; landfall can't be narrated before it happens. */
+export function checkTiming(text: string, f: ScenarioFacts): string | null {
+  const beforeLandfall = f.hoursToLandfall === null || f.hoursToLandfall > 0;
+  for (const s of sentencesOf(text)) {
+    if (!STORM_CONTEXT.test(s)) continue;
+    if (beforeLandfall && /\b(typhoon|storm)\b/i.test(s) && LANDFALL_HAPPENED.test(s)) return 'timing:future-phase';
+    for (const m of s.matchAll(COUNTDOWN)) {
+      if (!f.landfallRevealed || f.hoursToLandfall === null) return 'timing:hidden';
+      const n = Number(m[1]) || WORD_NUMBERS[m[1]!.toLowerCase()] || 0;
+      const hours = /^day/i.test(m[3]!) ? n * 24 : n;
+      if (Math.abs(hours - f.hoursToLandfall) > Math.max(3, f.hoursToLandfall * 0.15)) return 'timing:contradiction';
+    }
+  }
   return null;
 }

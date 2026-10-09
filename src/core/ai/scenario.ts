@@ -36,7 +36,10 @@ export function buildScenarioRequest(s: GameState): ScenarioAIRequest | null {
       homeType: p.housing.type, floors: p.housing.floors, homeDescription: describeHome(p.housing), theme: p.theme,
     },
     state: {
-      hoursToLandfall: Math.round(sel.minutesToLandfall(s) / sel.HOUR), weather: s.environment.weatherState,
+      // Only what the player may know: no countdown until the engine reveals landfall timing.
+      hoursToLandfall: s.environment.landfallRevealed ? Math.round(sel.minutesToLandfall(s) / sel.HOUR) : null,
+      landfallRevealed: s.environment.landfallRevealed, floodSeverity: s.environment.floodSeverity, location: sel.householdLocation(s),
+      weather: s.environment.weatherState,
       powerAvailable: s.environment.powerAvailable, goBag: sel.goBagStatus(s),
       availableItems: available.map((id) => ITEM_LABELS[id]),
       unavailableItems: ITEM_IDS.filter((id) => !available.includes(id) && id !== 'SANDBAGS' && id !== 'FUEL').map((id) => ITEM_LABELS[id]),
@@ -105,6 +108,10 @@ export function validateScenarioResponse(req: ScenarioAIRequest, raw: string): V
   const why = checkGrounding(`${r.dialogue} ${r.description}`, {
     livesAlone: req.household.livesAlone, allowedItems, placesAllowed: req.eventId === 'EV11',
     home: { type: req.household.homeType, floors: req.household.floors },
+    scene: {
+      landfallRevealed: req.state.landfallRevealed ?? req.state.hoursToLandfall !== null, hoursToLandfall: req.state.hoursToLandfall,
+      floodSeverity: req.state.floodSeverity, powerAvailable: req.state.powerAvailable, location: req.state.location ?? 'home',
+    },
   });
   if (why) return { ok: false, reason: 'ungrounded', detail: why };
   const content = ScenarioAIResponse.parse(r);
