@@ -19,7 +19,8 @@ Status: ✅ implemented + tested · 🟡 partial · ⏳ deferred · ⛔ deprecat
 | GD §8 | 19 preparation actions with costs and prerequisites; no unsafe outdoor tasks after conditions turn | `content/actions.ts` | ✅ | `actions.test` |
 | GD §9 | Storm timeline (h0/8/16/24/32, advisory, outage, closures, landfall, +3, +6, days 1–3), seed variation, acceleration 0/4/8 | `content/storm.ts` | ✅ | `clock.test` (acceleration), `storm.test` |
 | GD §10 | EV01–EV16 with engine-selected variants (incl. the GD variant table) | `content/events.ts` | ✅ | `storm.test` variants |
-| GD §11 | Evacuation branching: advisory, assistance, destination, route, travel, arrival, home branch | `actions.ts` FOLLOW_EVACUATION, `storm.ts` | ✅ | `storm.test` |
+| GD §11 | Evacuation branching: advisory, assistance, destination, route, travel, arrival, home branch | `actions.ts` FOLLOW_EVACUATION, `storm.ts`, `selectors.householdLocation/routeClosureMinute` | ✅ | `storm.test`, `evacuation-timing.test` |
+| R23 | Bayanihan community assistance (B06) and Whole Barangay (A08) | `content/community.ts`, `evaluation/community.ts`, `evaluation/badges.ts`, `evaluation/achievements.ts`, `migrations.ts` | ✅ | `community.test`, `docs-examples.test` 6.5 |
 | GD §12 | Authored hazard states, shelter condition, property/supply outcomes; no numeric formulas | `storm.ts` `applyPeak`/`applyImpactEnd` | ✅ | `storm.test` |
 | GD §13 | Three-day aftermath with resource review, updates, reflection | `storm.ts`, EV14–16 | ✅ | `storm.test` |
 | GD §14 | 6 competencies (20/20/15/20/15/10), reweighting, no demographic penalty, endings 85/60, Na-rescue authored | `evaluation/*` | ✅ | `evaluation.test` |

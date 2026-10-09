@@ -11,6 +11,8 @@ The milestones follow the backend directive (§15). They are tracked here; detai
 | 5. Local AI and evaluation | Context builder, prompts, constrained schema, validation + grounding guard, fallback, scoring, badges, debrief | ✅ | `evaluation.test`, `ai.test`, guard run over 60 real benchmark outputs |
 | 6. Persistence and deployment | Save/load, badges, profile, LLM lifecycle, IPC bridge, packaging, self-test | 🟡 | `main/*.test`; packaged self-test passed. **Airplane-mode run pending** |
 
+**Bayanihan revision and evacuation fix (2026-10-10):** the named neighbour NPC was removed; B06/A08 now use generic community assistance (`01eaf7f`). In-transit households are no longer treated as home, and late departures are validated against route closure (`20d1f2d`). See SPEC_RECONCILIATION R23–R24; tests in `community.test`, `evacuation-timing.test`.
+
 **Frontend handoff (2026-10-09):** added the docs (root README, docs index, setup guides, frontend hub) and `GameEngine.getShopCatalog()` (tested). Known integration gaps G1–G10 are listed in `docs/frontend/FRONTEND_BACKEND_INTEGRATION.md` §18.
 
 ## Next (priority order)

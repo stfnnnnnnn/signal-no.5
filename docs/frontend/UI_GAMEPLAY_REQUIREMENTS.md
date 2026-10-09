@@ -29,7 +29,7 @@ Derived from the three specs in [`docs/specs/`](../specs/): **GD** = Complete Ga
   - Four reusable base sprites: **Boy, Girl, Mom, Dad** (`spriteBase`: `boy | girl | mom | dad`). These are visual templates, not family relationships.
   - Clothing variants `clothingVariant` 0–3 and `paletteId`, both from `getWorldConfig().characters`. `paletteId === 'custom'` means use `profile.appearance.clothingColor`.
   - Up to **3 visible household NPCs** (`visibleNpc`, with `npcId`). Infants and toddlers are `dependent: true`; show them as a dependent character (e.g. held or in a crib), never as a walking NPC.
-  - Other NPCs: shopkeeper, neighbor (`NPC_NEIGHBOR`), evacuation-center staff (`NPC_CENTER_STAFF`).
+  - Other NPCs: shopkeeper and evacuation-center staff (`NPC_CENTER_STAFF`). `NPC_NEIGHBOR` is a dialogue voice only (no sprite). There is no neighbour character to visit.
   - Idle and walk animations in 4 directions.
 - **Optional:** hairstyle variations, emotes, item-pickup animation.
 - **Never** use sex or age to imply capability. The backend doesn't, either.
@@ -115,7 +115,7 @@ On interact, call `engine.interact(id)`. Then either open the event dialog or sh
 - **MVP:**
   - The EV08 advisory dialog with choices.
   - "Leave for the evacuation destination" is disabled with a reason until assistance is arranged (households that need help).
-  - After departure: the `STREET` transition and a "Continue" (`skipToNextMilestone`) control, then arrival at `EVACUATION` (EV11).
+  - After departure: the `STREET` transition and a "Continue" (`skipToNextMilestone`) control, then arrival at `EVACUATION` (EV11). A household still travelling at landfall stays on `STREET`; departures too late to arrive before the route closes are disabled with the engine's reason.
 - The backend owns the destination, route and travel time. Don't add routes or maps.
 
 ## 11. Aftermath (GD §13)
@@ -142,6 +142,8 @@ On interact, call `engine.interact(id)`. Then either open the event dialog or sh
   - A player wellbeing meter (not "health").
   - An achievements screen (`achievements.read()`) with progress bars (`progress`/`target`) and unlock toasts from `recordRun().newlyUnlocked`.
 - Call `achievements.markPlanViewed(runId)` when the personalized plan or checklist is displayed.
+- **Bayanihan (B06):** the phone menu offers "Share the verified official advisory with neighbours" and the front door offers "Help neighbours with the community preparedness activity" (also in EV12). Show them like any action (time cost, disabled with reasons), and a badge toast on `badgeEarned`. Never present them as mandatory or as rescues.
+- **Whole Barangay (A08):** progress n/5 on the achievements screen.
 
 ## 13. Onboarding UI (onboarding v2; supersedes the 26-question survey)
 

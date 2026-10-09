@@ -155,6 +155,7 @@ engine.skipToNextMilestone(): CommandResult             // only in evacuation/im
 | { type: 'phaseChanged'; from; to }                      | { type: 'sceneChanged'; from; to }
 | { type: 'speedChanged'; timeScale; reason: 'player' | 'critical' }
 | { type: 'purchaseCompleted'; shopItemId; quantity; total } | { type: 'runCompleted' }
+| { type: 'badgeEarned'; badgeId: 'B06' }                 // once per run, when a qualifying community action completes
 ```
 
 The current event is always `state.activeEvent` (`{ eventId, variantId, triggeredAtMinute, mandatory, actionIds }`). Event titles: `EVENT_BY_ID.get(id).title` in `src/core/content/events.ts`.
@@ -194,7 +195,7 @@ engine.resolveEvent(actionId: string): CommandResult
 
 ## 14. Transition between phases  (sync, via events)
 
-- **Phases:** a new run starts in `preparation` → `warning` (h24) → `evacuation` (travelling to or at the center before landfall) → `impact` (landfall) → `aftermath` → `debrief`. `completed: true` after EV16. `setup` exists in the `GamePhase` enum but the engine never sets it; pre-game screens are frontend-only.
+- **Phases:** a new run starts in `preparation` → `warning` (h24) → `evacuation` (travelling to or at the center before landfall) → `impact` (landfall; a household still travelling stays on `STREET` until it arrives) → `aftermath` → `debrief`. `completed: true` after EV16. `setup` exists in the `GamePhase` enum but the engine never sets it; pre-game screens are frontend-only.
 - **Scenes:** `HOUSE`, `SHOP`, `STREET` (evacuation travel), `EVACUATION`, `HOME_IMPACT`, `AFTERMATH`, `RESULTS`.
 - React to `phaseChanged` / `sceneChanged` (load the matching Phaser scene). During `evacuation`, `impact` and `aftermath`, offer a "Continue" button that calls `skipToNextMilestone()`.
 
@@ -287,7 +288,7 @@ Don't call `pause('dialogue')` for optional interactions; only mandatory events 
 New interactions:
 - `BEDROOM_MEDICATION` → `CHECK_ESSENTIAL_SUPPLIES` (discovery). The cabinet also exists when the medical answer was "not sure" or "prefer not to say", and checking it is a privacy-preserving objective.
 - `LIVING_PHONE` → `CHARGE_POWER_BANK`.
-- **`NPC_ALING_NENA`** (an interactable at the entrance) → `TALK_TO_NENA` (conversation) and `HELP_NENA_PREPARE` (45 min, only before the advisory and while it's safe outside; never a rescue). EV12 offers it too.
+- `LIVING_PHONE` → `SHARE_VERIFIED_ADVISORY` and `ENTRANCE_DOOR` → `HELP_COMMUNITY_PREPARATION`: the Bayanihan community-assistance actions (§17h). EV12__COMMUNITY offers both.
 - `INSPECT_GO_BAG` and `INSPECT_SUPPLIES` are now discovery actions (0 min).
 
 ## 17e. Player wellbeing  (state)
@@ -341,6 +342,26 @@ window.signal.achievements.read(): Promise<AchievementStatus[]>
 
 ---
 
+## 17h. Community assistance (B06 Bayanihan, A08 Whole Barangay)  (sync)
+
+No neighbour character exists. Two allowlisted actions qualify (`COMMUNITY_ASSISTANCE`, `src/core/content/community.ts`):
+
+| Action | Interactable / event | Cost | Requires | Must finish by |
+|---|---|---|---|---|
+| `SHARE_VERIFIED_ADVISORY` | `LIVING_PHONE`, EV12__COMMUNITY | 15 min (−5 % battery in an outage) | Official info already checked (`BULLETIN_CHECKED`); power or battery ≥ 10 %; once | Landfall |
+| `HELP_COMMUNITY_PREPARATION` | `ENTRANCE_DOOR`, EV12__COMMUNITY | 60 min | At home, safe outdoors, no evacuation advisory, road not closed; once | Heavy rain or the advisory (earlier one) |
+
+- Success: `ok: true`, a `DecisionRecord`, and the first time `{ type: 'badgeEarned', badgeId: 'B06' }`. `evaluate()` then reports B06 `earned` mid-run.
+- Rejection: `ok: false`, `ACTION_UNAVAILABLE`, `error.reasons[]`; nothing is recorded. Reading an advisory, visiting the barangay hall or forwarding a rumour never qualifies.
+- B06 is optional: never part of Handa, the score or wellbeing. `notApplicable` only if no allowlisted action applies (not the case for any supported household).
+- A08: `progress` = completed runs whose B06 was earned (target 5), from `achievements.recordRun`. Run summaries store `communityHelpCompleted` and `communityHelpActionId`.
+
+## 17i. Evacuation travel  (sync)
+
+- `sel.householdLocation(state)` (`src/core/selectors.ts`) = `home | inTransit | evacuationCenter`, derived from `state.evacuation`.
+- `FOLLOW_EVACUATION` is rejected when now + travel time would pass `sel.routeClosureMinute(state)` (road-closure event: L−2 h, otherwise the peak at L+3 h). Reason: "Too late to travel safely: …".
+- Landfall no longer closes every road (open → `restricted`). A household travelling at landfall stays on `STREET` (phase `impact`), arrives at `EVACUATION` (EV11), and never gets EV10 or home damage.
+
 ## 18. Known gaps
 
 | # | Gap | Impact / workaround |
@@ -351,7 +372,7 @@ window.signal.achievements.read(): Promise<AchievementStatus[]>
 | G4 | `BARANGAY` scene not wired; `BARANGAY_VISIT` is an action without a scene change | Optional scene per GD; show a short transition if desired |
 | G5 | No settings store (volume, accessibility) | Use `localStorage` in the renderer for UI-only preferences |
 | G6 | No exported type for `getWorldConfig()`'s return value | Use `ReturnType<GameEngine['getWorldConfig']>` |
-| G7 | No save-schema migration | Saves from older schema versions read as `null` |
+| G7 | No general save-schema migration | Saves from older schema versions read as `null`. Exception: saves and `progress.json` v1 from before the Bayanihan revision are migrated on load (`src/core/migrations.ts`) |
 | G8 | React, Phaser and Playwright are not installed; no import alias | Frontend adds its own dependencies and config |
 | G9 | Focus-loss pause isn't automatic | Call `pause('focusLost')` on window blur and `resume('focusLost')` on focus |
 | G11 | Shopkeeper and center staff have no NPC cue or interaction IDs beyond the shop counter and EV11 | Presentation-only characters |

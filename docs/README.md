@@ -80,9 +80,10 @@ When two documents disagree:
 | `tests/*.test.ts` | Household, init, actions, clock/scheduler, shop, storm/evacuation/aftermath, evaluation/badges, AI context/validation/guard |
 | `tests/main/*.test.ts` | Model-server manager (real child process + `fake-llama-server.mjs`), AI service (real HTTP fake model), save store (temp folders) |
 | `tests/helpers.ts`, `tests/fixtures/onboarding.ts`, `tests/diligent.ts` | `newGame`, `playToEnd`, `resolveFirst`; `customFamily()`, `customSolo()`, `randomHousehold()`; `playDiligently` (a Handa-quality run) |
-| `tests/docs-examples.test.ts` | Executable versions of the blueprint §6 examples |
+| `tests/docs-examples.test.ts`, `tests/docs-sync.test.ts` | Executable blueprint §6 examples (incl. 6.5 Bayanihan); frontend docs stay free of the removed NPC |
+| `tests/community.test.ts`, `tests/evacuation-timing.test.ts` | B06/A08 community assistance, migrations, removal; evacuation travel and location consistency |
 
-Run with `npm test` (293 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
+Run with `npm test` (322 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
 
 ## 11. Packaging
 | Document | Description | Audience | Type |

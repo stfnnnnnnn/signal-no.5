@@ -10,7 +10,7 @@
 
 The API details live in [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md) (every call, type and error). The scene contract and asset IDs are in [FRONTEND_BACKEND_CONTRACTS.md](../implementation/FRONTEND_BACKEND_CONTRACTS.md). This blueprint links to them and doesn't copy them.
 
-> **Verified, 2026-10-09** (repository at commit `22f9e3e` plus this documentation commit):
+> **Verified, 2026-10-10** (repository after the Bayanihan revision `01eaf7f` and the evacuation-timing fix `20d1f2d`, plus this documentation commit):
 > - Every code example in §6 runs as `tests/docs-examples.test.ts`.
 > - The mapping tables in §5 were generated from `src/core/content/*`.
 > - Nothing in this document claims a frontend feature works: **no frontend exists yet** (see §1).
@@ -27,7 +27,7 @@ The API details live in [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEG
 | Renderer entry | **Backend dev harness only** | `src/renderer/index.html` + `src/renderer/harness.ts` (buttons and JSON; uses the deprecated legacy survey). It's a reference, to be replaced |
 | Renderer build | **Exists** | `electron.vite.config.ts` `renderer` block (root `src/renderer`, input `index.html`). Vite 7.3.7 |
 | Remote (`origin/main`) | Only the two initial commits | `git fetch` on 2026-10-09: no frontend branch exists |
-| Backend engine, contracts, AI, persistence, packaging | **Complete and tested** (293 tests) | `npm test`. See [IMPLEMENTATION_PLAN.md](../implementation/IMPLEMENTATION_PLAN.md) |
+| Backend engine, contracts, AI, persistence, packaging | **Complete and tested** (322 tests) | `npm test`. See [IMPLEMENTATION_PLAN.md](../implementation/IMPLEMENTATION_PLAN.md) |
 | Electron shell, preload bridge, CSP, model server | **Complete** | `src/main/*`, `src/preload/index.ts`, `src/shared/bridge.ts` |
 
 **What the frontend gets on day one:**
@@ -105,9 +105,9 @@ Phaser House.update(time, delta):
 |---|---|---|
 | `HOUSE` | House | Run start; `RETURN_HOME` |
 | `SHOP` | Shop | `SHOP_TRIP` |
-| `STREET` | Street (short transit) | `FOLLOW_EVACUATION` (phase `evacuation`) |
-| `EVACUATION` | Evacuation | Arrival milestone (EV11), or landfall while sheltering at the center |
-| `HOME_IMPACT` | HomeImpact (House map, storm look) | Landfall while sheltering at home |
+| `STREET` | Street (transit) | `FOLLOW_EVACUATION` (phase `evacuation`). A household still travelling at landfall **stays on `STREET`** (phase `impact`) until it arrives |
+| `EVACUATION` | Evacuation | Arrival milestone `EVAC_ARRIVAL` (EV11), before or after landfall |
+| `HOME_IMPACT` | HomeImpact (House map, storm look) | Landfall while the household is **at home** (never for a household that has left) |
 | `AFTERMATH` | Aftermath (House map, recovery look) | `AFTERMATH_DAY1` milestone |
 | `RESULTS` | React Debrief screen (Phaser paused) | EV16 resolved (`runCompleted`) |
 
@@ -147,7 +147,7 @@ Each screen lists its inputs, outputs, backend calls, navigation and acceptance 
   - Traditional Filipino → `tileset_house_traditional`.
   - Swap by `getWorldConfig().theme`. The geometry and collision are identical for both.
 - **Areas:** living room, kitchen, bedroom, utility, entrance/yard, stairs, windows. These match `interactables[].area`.
-- **Object layer `anchors`:** one point per interactable ID (§5.1), one per `PropAnchor`, NPC spawn points (`npc_spawn_1..3`, `nena_spawn`) and `player_spawn`. These coordinates are **frontend-owned** (gap G3).
+- **Object layer `anchors`:** one point per interactable ID (§5.1), one per `PropAnchor`, NPC spawn points (`npc_spawn_1..3`) and `player_spawn`. These coordinates are **frontend-owned** (gap G3).
 - **Multi-floor homes** (`profile.housing.floors > 1`): only show the stairs as a visual cue. Don't add explorable floors.
 
 ### 4.3 Player and NPCs
@@ -156,10 +156,7 @@ Each screen lists its inputs, outputs, backend calls, navigation and acceptance 
   - 4-direction movement at 90 px/s with collision.
 - **Household NPCs:** `characters.filter(c => c.visibleNpc)` (at most 3), placed at `npc_spawn_*`. Interact by passing the NPC's `npcId`, e.g. `engine.interact('NPC_M2')`.
 - **Dependents** (`dependent: true`, toddlers): draw them near an adult. They're never interactable or walking.
-- **Aling Nena:** the interactable `NPC_ALING_NENA` at `nena_spawn` (entrance/yard).
-  - Sprite `npc_aling_nena`, an older-woman neighbour.
-  - She **doesn't** get scene-directive cues (gap G11); use idle or waving.
-  - Show her in `HOUSE` before the advisory. Afterwards, the frontend may hide her (the backend rejects `HELP_NENA_PREPARE` after the advisory).
+- **No neighbour character.** Community assistance (Bayanihan) uses existing objects only: the phone and the front door (§5.12). Don't add a neighbour sprite, marker or dialogue tree.
 - **Pets:** `getWorldConfig().pets` (`dog|cat|bird|other`), placed at `PET_AREA`.
 
 ### 4.4 Interaction system
@@ -171,7 +168,7 @@ Each screen lists its inputs, outputs, backend calls, navigation and acceptance 
 - **Menu by `kind`:**
   - `discovery` (0 min): run it, then show a DiscoveryCard built from state (§6.3), e.g. missing go-bag items, water vs target.
   - `preparation`: run `executeAction(id)` and show the time spent (`timeCostMinutes`).
-  - `conversation`: run it and show a short line. **There's no backend text for `TALK_TO_NENA`** (gap BK-3), so use a proposed placeholder line from [CONTENT_REVIEW.md](../implementation/CONTENT_REVIEW.md).
+  - `conversation`: reserved kind; no current world action uses it.
 - **Unavailable actions:** disabled, with `reasons` shown as a tooltip.
 
 ### 4.5 Typhoon progression and environment
@@ -188,20 +185,19 @@ Each screen lists its inputs, outputs, backend calls, navigation and acceptance 
 | Interactable | Scene | Area | Actions (id · kind · min) |
 |---|---|---|---|
 | `LIVING_TV` (Television) | HOUSE | livingRoom | CHECK_BULLETIN · preparation · 30 |
-| `LIVING_PHONE` (Phone) | HOUSE | livingRoom | CHARGE_PHONE · preparation · 120<br>CHECK_BULLETIN · preparation · 30<br>ARRANGE_ASSISTANCE · preparation · 60<br>PREPARE_COMMUNICATION · preparation · 30<br>CHARGE_POWER_BANK · preparation · 60 |
+| `LIVING_PHONE` (Phone) | HOUSE | livingRoom | CHARGE_PHONE · preparation · 120<br>CHECK_BULLETIN · preparation · 30<br>ARRANGE_ASSISTANCE · preparation · 60<br>PREPARE_COMMUNICATION · preparation · 30<br>CHARGE_POWER_BANK · preparation · 60<br>SHARE_VERIFIED_ADVISORY · preparation · 15 (Bayanihan) |
 | `LIVING_RADIO` (Radio) | HOUSE | livingRoom | CHECK_BULLETIN · preparation · 30 |
 | `KITCHEN_CABINET` (Food cabinet) | HOUSE | kitchen | INSPECT_SUPPLIES · discovery · 0 |
 | `KITCHEN_SINK` (Sink) | HOUSE | kitchen | FILL_CONTAINERS · preparation · 30<br>INSPECT_SUPPLIES · discovery · 0 |
 | `BEDROOM_CLOTHES` (Clothes cabinet) | HOUSE | bedroom | PACK_GO_BAG · preparation · 90<br>PREPARE_CHILD_SUPPLIES · preparation · 30 |
 | `BEDROOM_DOCUMENTS` (Documents drawer) | HOUSE | bedroom | PROTECT_DOCUMENTS · preparation · 30 |
 | `BEDROOM_MEDICATION` (Medicine cabinet) | HOUSE | bedroom | PACK_MEDICATION · preparation · 30<br>CHECK_ESSENTIAL_SUPPLIES · discovery · 0 |
-| `NPC_ALING_NENA` (Aling Nena (neighbour)) | HOUSE | entrance | TALK_TO_NENA · conversation · 5<br>HELP_NENA_PREPARE · preparation · 45 |
 | `UTILITY_TOOLS` (Toolbox) | HOUSE | utility | GET_TOOLS · preparation · 15 |
 | `UTILITY_SHELF` (Supply shelf) | HOUSE | utility | INSPECT_SUPPLIES · discovery · 0 |
 | `UTILITY_DRUM` (Water drum) | HOUSE | utility | FILL_DRUM · preparation · 60 |
 | `UTILITY_LADDER` (Ladder) | HOUSE | utility | SECURE_ROOF · preparation · 180 |
 | `PET_AREA` (Pet corner) | HOUSE | utility | PREPARE_PET_SUPPLIES · preparation · 30 |
-| `ENTRANCE_DOOR` (Front door) | HOUSE | entrance | SECURE_OBJECTS · preparation · 30<br>SANDBAG_GATE · preparation · 90<br>SHOP_TRIP · preparation · 60<br>BARANGAY_VISIT · preparation · 90<br>FOLLOW_EVACUATION · preparation · 0 |
+| `ENTRANCE_DOOR` (Front door) | HOUSE | entrance | SECURE_OBJECTS · preparation · 30<br>SANDBAG_GATE · preparation · 90<br>SHOP_TRIP · preparation · 60<br>BARANGAY_VISIT · preparation · 90<br>HELP_COMMUNITY_PREPARATION · preparation · 60 (Bayanihan)<br>FOLLOW_EVACUATION · preparation · 0 |
 | `ENTRANCE_BAG` (Go-bag) | HOUSE | entrance | PACK_GO_BAG · preparation · 90<br>INSPECT_GO_BAG · discovery · 0 |
 | `STAIRS` (Stairs / high shelf) | HOUSE | stairs | RAISE_BELONGINGS · preparation · 120 |
 | `WINDOW` (Windows) | HOUSE | windows | BOARD_WINDOW · preparation · 90<br>SECURE_OBJECTS · preparation · 30 |
@@ -211,7 +207,7 @@ Each screen lists its inputs, outputs, backend calls, navigation and acceptance 
 
 ### 5.2 Events → variants → ordered choices
 
-Trigger notes: EV07 fires at `H28_RUMOR` only when the storm includes a rumour; EV11 fires at `EVAC_ARRIVAL`. Choices are filtered per household and state: EV09 with lighting = `USE_FLASHLIGHT, USE_POWER_BANK, CHECK_HOUSEHOLD_NEEDS`; EV10 adds `SEEK_HELP` when the shelter isn't normal; EV12__NEIGHBOR = `HELP_NENA_PREPARE, CHECK_HOUSEHOLD_NEEDS, DEFER`. Always render `engine.getEventChoices()`.
+Trigger notes: EV07 fires at `H28_RUMOR` only when the storm includes a rumour; EV11 fires at `EVAC_ARRIVAL`. Choices are filtered per household and state: EV09 with lighting = `USE_FLASHLIGHT, USE_POWER_BANK, CHECK_HOUSEHOLD_NEEDS`; EV10 adds `SEEK_HELP` when the shelter isn't normal; EV12__COMMUNITY = `HELP_COMMUNITY_PREPARATION, SHARE_VERIFIED_ADVISORY, CHECK_HOUSEHOLD_NEEDS, DEFER`; EV10 fires only for a household **at home**. Always render `engine.getEventChoices()`.
 
 | Event | Title | Mandatory | Trigger | Variants | Choices (engine order; filtered per household) |
 |---|---|---|---|---|---|
@@ -226,7 +222,7 @@ Trigger notes: EV07 fires at `H28_RUMOR` only when the storm includes a rumour; 
 | EV09 | Power interruption | yes | milestone POWER_OUTAGE | `EV09__BACKUP_READY`<br>`EV09__LIGHTING_GAP` | CHECK_HOUSEHOLD_NEEDS, DEFER |
 | EV10 | Shelter hazard | yes | milestone PEAK | `EV10__CRITICAL`<br>`EV10__WATER_RISING`<br>`EV10__LOOSE_OBJECTS`<br>`EV10__STRONG_WIND` | MOVE_TO_SAFER_ROOM, ACCOUNT_MEMBERS, GO_OUTSIDE_TO_CHECK |
 | EV11 | Evacuation arrival | yes | — | `EV11__WITH_SUPPLIES`<br>`EV11__WITHOUT_SUPPLIES` | ACCOUNT_MEMBERS, INSPECT_GO_BAG, CHECK_ADVISORY |
-| EV12 | Household dilemma | yes | milestone H32_DILEMMA | `EV12__ASSISTANCE`<br>`EV12__POWERED_EQUIPMENT`<br>`EV12__PET`<br>`EV12__CHILD`<br>`EV12__NEIGHBOR` | HELP_WITH_NEED, REVIEW_NEEDS, DEFER, HELP_NENA_PREPARE, CHECK_HOUSEHOLD_NEEDS |
+| EV12 | Household dilemma | yes | milestone H32_DILEMMA | `EV12__ASSISTANCE`<br>`EV12__POWERED_EQUIPMENT`<br>`EV12__PET`<br>`EV12__CHILD`<br>`EV12__COMMUNITY` | HELP_WITH_NEED, REVIEW_NEEDS, DEFER, HELP_COMMUNITY_PREPARATION, SHARE_VERIFIED_ADVISORY, CHECK_HOUSEHOLD_NEEDS |
 | EV13 | Household status | yes | milestone IMPACT_END | `EV13__ACCOUNTED`<br>`EV13__CHECK_NEEDED` | ACCOUNT_MEMBERS, REVIEW_NEEDS, DEFER |
 | EV14 | Resource review | yes | milestone AFTERMATH_DAY1 | `EV14__SUFFICIENT`<br>`EV14__SHORTFALL` | REVIEW_RESOURCES, DEFER |
 | EV15 | Recovery update | yes | milestone AFTERMATH_DAY2 | `EV15__DEFAULT` | VERIFY_GUIDANCE, PLAN_RECOVERY, DEFER |
@@ -253,7 +249,9 @@ Trigger notes: EV07 fires at `H28_RUMOR` only when the storm includes a rumour; 
 | FLOOD_RISING | 46 | — |  |
 | ROAD_CLOSED | 46 | — |  |
 | LANDFALL | 48 | — | yes |
-| PEAK | 51 | EV10 | yes |
+| PEAK | 51 | EV10 (home only) | yes |
+
+Route status: with a road-closure event the road is restricted at L−4 and closed at L−2 (as above). Without one, landfall only **restricts** the road and it closes at the peak. `FOLLOW_EVACUATION` is rejected when the trip would end after that closure (§5.13).
 | IMPACT_END | 54 | EV13 |  |
 | AFTERMATH_DAY1 | 60 | EV14 |  |
 | AFTERMATH_DAY2 | 84 | EV15 |  |
@@ -288,8 +286,8 @@ Trigger notes: EV07 fires at `H28_RUMOR` only when the storm includes a rumour; 
 | INSPECT_GO_BAG | Inspect the go-bag | 0 |  |
 | CHECK_ESSENTIAL_SUPPLIES | Check the medicine cabinet | 0 |  |
 | CHARGE_POWER_BANK | Charge the power bank | 60 |  |
-| TALK_TO_NENA | Check on Aling Nena | 5 |  |
-| HELP_NENA_PREPARE | Help Aling Nena pack and register for official assistance | 45 |  |
+| SHARE_VERIFIED_ADVISORY | Share the verified official advisory with neighbours | 15 |  |
+| HELP_COMMUNITY_PREPARATION | Help neighbours with the community preparedness activity | 60 |  |
 | FOLLOW_EVACUATION | Leave for the evacuation destination | 0 |  |
 | CHECK_ADVISORY | Check the official advisory | 30 |  |
 | REVIEW_PLAN | Review the household plan | 15 |  |
@@ -415,8 +413,7 @@ Trigger notes: EV07 fires at `H28_RUMOR` only when the storm includes a rumour; 
 | ID | Who | Where it appears |
 |---|---|---|
 | `NPC_M<n>` | Visible household member n (`characters[].npcId`) | World NPC, dialog speaker, scene-directive `npcCues` |
-| `NPC_ALING_NENA` | Neighbour | World interactable (§4.3) |
-| `NPC_NEIGHBOR` | Generic neighbour voice (single-person households, EV07) | Dialog speaker only |
+| `NPC_NEIGHBOR` | Generic neighbour voice (EV07; EV12 in single-person households). No sprite: show it as an off-screen voice or a phone message | Dialog speaker only |
 | `NPC_CENTER_STAFF` | Evacuation-center staff | Dialog speaker (EV11) |
 | `NARRATOR` | Narration and advisories | Dialog speaker |
 
@@ -440,6 +437,35 @@ Trigger notes: EV07 fires at `H28_RUMOR` only when the storm includes a rumour; 
 
 ---
 
+### 5.12 Community assistance (B06 Bayanihan, A08 Whole Barangay)
+
+Bayanihan is earned by **one completed, safe, qualifying community action**. There is no neighbour NPC, scene or dialogue tree: the actions sit on existing objects and in EV12. The allowlist is `COMMUNITY_ASSISTANCE` in `src/core/content/community.ts`; evaluation is in `src/core/evaluation/community.ts`.
+
+| Action ID | Where | Cost | Available when (engine reasons shown if not) | Deadline (must be *finished* by) | Effect |
+|---|---|---|---|---|---|
+| `SHARE_VERIFIED_ADVISORY` | `LIVING_PHONE`; EV12__COMMUNITY choice | 15 min; −5 % phone battery during an outage | Official information already checked (`flags.BULLETIN_CHECKED`, set by `CHECK_BULLETIN`, `CHECK_ADVISORY`, `READ_UPDATE`, `REVIEW_ADVISORY`); power or battery ≥ 10 %; once per run | Landfall | `flags.VERIFIED_INFO_SHARED` |
+| `HELP_COMMUNITY_PREPARATION` | `ENTRANCE_DOOR`; EV12__COMMUNITY choice | 60 min | At `HOUSE`; safe outdoors; no evacuation advisory yet; road not closed; once per run | Heavy rain (L−8 h) or the advisory, whichever is first | `flags.COMMUNITY_PREP_HELPED` |
+
+| Case | Engine behaviour | UI |
+|---|---|---|
+| Completed qualifying action | `ok: true`; decision appended to `decisionLog`; **first time only**, `events` include `{ type: 'badgeEarned', badgeId: 'B06' }`; `evaluate()` shows B06 `earned` immediately | Badge toast (icon `badge_b06_bayanihan`, name from `getBadgeCatalog()`), `sfx_badge_unlock` once |
+| Rejected (not verified, too late, unsafe, already done) | `ok: false`, `ACTION_UNAVAILABLE`, `error.reasons[]`; nothing recorded | Disabled menu item with the reasons (from `getAvailableActions`/`getEventChoices`) |
+| Non-qualifying community-flavoured actions | `CHECK_BULLETIN`, `CHECK_ADVISORY`, `BARANGAY_VISIT`, `VERIFY_RUMOR` never earn B06; `FORWARD_RUMOR` is unsafe | Nothing special |
+| Declining | No penalty: B06 is never part of Handa, the score or wellbeing | Show B06 as "Not earned" neutrally in the debrief |
+| No opportunity | B06 `notApplicable` (not reachable in supported configurations; every household has the phone action) | Neutral "Not applicable" |
+
+**A08 Whole Barangay:** `progress` = number of distinct completed runs whose B06 result was `earned` (target 5). Recorded by `window.signal.achievements.recordRun(state)`, which re-evaluates in the main process. Each run ID counts once; abandoned runs are rejected; progress survives restarts. Show `progress/target` on the achievements screen and a toast when `newlyUnlocked` contains `A08`. Persistence of B06 across runs happens at `recordRun`, so a mid-run toast doesn't need a save call.
+
+### 5.13 Evacuation travel and household location
+
+| Derived location (`sel.householdLocation(state)`) | Condition | Scene during impact | Home hazards (EV10, peak shelter damage) |
+|---|---|---|---|
+| `home` | Not departed | `HOME_IMPACT` | Yes |
+| `inTransit` | `evacuation.departedAtMinute` set, not arrived | `STREET` (even after landfall) | No |
+| `evacuationCenter` | `evacuation.completed` | `EVACUATION` | No |
+
+`FOLLOW_EVACUATION` needs: an evacuation advisory; not already departed; before landfall; road not closed; assistance arranged if needed; and **arrival (now + travel time) ≤ `sel.routeClosureMinute(state)`**. Otherwise its reason is "Too late to travel safely: the route is expected to close before you would arrive. Stay indoors in the safest room and follow official instructions." Travel time is 2 h, +90 min if the destination isn't known yet, +1 h with a household member who needs assistance. While in transit, show the `STREET` scene and a "Continue" control (`skipToNextMilestone()`).
+
 ## 6. Verified integration examples
 
 Source: `tests/docs-examples.test.ts`. All of these run under `npm test`. The payload excerpts below are real output.
@@ -461,7 +487,7 @@ if (!r.ok) showFieldErrors(r.error.issues);          // e.g. [{ path: ['q2ExactS
 else {
   const engine: GameEngine = r.engine;               // r.events includes eventTriggered EV01
   const profile = engine.getProfile();               // { configMode: 'custom', exposure: 'waterway', size: 3, budgetTier: 'moderate', … }
-  const world = engine.getWorldConfig();             // interactables include NPC_ALING_NENA and BEDROOM_MEDICATION (medical "not sure")
+  const world = engine.getWorldConfig();             // interactables include LIVING_PHONE and BEDROOM_MEDICATION (medical "not sure")
 }
 ```
 Real `profile.members[0]`: `{"id":"M1","ageGroup":"age36to59","sex":"unspecified","spriteBase":"dad","clothingVariant":0,"paletteId":"pal_dad_0","dependent":false,"isPlayer":true,"visibleNpc":false,"npcId":null}`
@@ -523,6 +549,25 @@ Real `recordRun`: `newlyUnlocked: ["A01","A09"]`. A03 shows `progress: 15, targe
 
 ---
 
+### 6.5 Community assistance: phone → verified bulletin → share → Bayanihan → A08
+```ts
+// Player walks to the phone and presses E.
+const menu = engine.interact('LIVING_PHONE');                    // r.actions includes CHECK_BULLETIN and SHARE_VERIFIED_ADVISORY
+// SHARE_VERIFIED_ADVISORY is disabled until official information was checked:
+//   { available: false, reasons: ['Check official information first; only verified information should be shared.'] }
+engine.executeAction('CHECK_BULLETIN');                          // verified official information (30 min)
+const r = engine.executeAction('SHARE_VERIFIED_ADVISORY');       // validated by the engine (15 min)
+if (r.ok) {
+  r.decision!.actionId;                                          // 'SHARE_VERIFIED_ADVISORY' (also r.state.decisionLog.at(-1))
+  if (r.events.some((e) => e.type === 'badgeEarned' && e.badgeId === 'B06')) showBadgeToast('B06');
+  engine.evaluate().badges.find((b) => b.id === 'B06')!.status; // 'earned' (already mid-run)
+}
+// At the end of the run (runCompleted):
+const { achievements } = await window.signal.achievements.recordRun(engine.getState());
+achievements.find((a) => a.id === 'A08');                        // { progress: 1, target: 5, unlocked: false, … }
+```
+Verified in `tests/docs-examples.test.ts` (6.5).
+
 ## 7. State synchronisation, de-duplication and audio
 
 | Concern | Rule |
@@ -536,6 +581,7 @@ Real `recordRun`: `newlyUnlocked: ["A01","A09"]`. A03 shows `progress: 15, targe
 | Audio | **Ambient:** one loop keyed by `directive.audio`; crossfade only when the key changes. **One-shots** (alert, badge, thunder): play only from `EngineEvent`s or newly added `LIGHTNING_FLASH`, never from re-renders. Mute and volume come from Settings. |
 | Pausing | `pause('menu'|'shop')` while menus or the shop UI are open. `pause('focusLost')` on window blur. `pause('loading')` while showing a loading screen. Always `resume` with the same reason. **Don't** pause for discovery or conversation. |
 | Speed | `setSpeed(1|2|4|8|16|32)`. Show a banner on `speedChanged` with `reason: 'critical'`. |
+| Badge unlock | Show a toast for each `badgeEarned` event in a command result (only B06 today; emitted once per run). Never infer unlocks from re-renders |
 | After landfall | Show a "Continue" button calling `skipToNextMilestone()` when no event is open during the `evacuation`, `impact` and `aftermath` phases. |
 
 ## 8. Error handling
@@ -559,7 +605,7 @@ Real `recordRun`: `newlyUnlocked: ["A01","A09"]`. A03 shows `progress: 15, targe
 |---|---|---|
 | Tilesets | `tileset_house_modern`, `tileset_house_traditional`, `tileset_exterior_yard_street`, `tileset_shop`, `tileset_evacuation_center` | 16×16 |
 | Player and household sprites | `sprite_boy`, `sprite_girl`, `sprite_mom`, `sprite_dad` × 4 clothing variants (`pal_<base>_0..3`) + `custom` tint; `sprite_toddler_dependent` | Animations: idle and walk × 4 directions, plus `NpcAnimation`: `idle, pacing, packing, sitting, lookingOutWindow, huddled, waving, cleaning, sleeping`; `NpcEmotion` bubbles: `calm, worried, anxious, determined, relieved, tired` |
-| Other characters | `npc_aling_nena`, `npc_shopkeeper`, `npc_center_staff`; pets `pet_dog`, `pet_cat`, `pet_bird`, `pet_other` | |
+| Other characters | `npc_shopkeeper`, `npc_center_staff`; pets `pet_dog`, `pet_cat`, `pet_bird`, `pet_other` | No neighbour sprite is needed (Bayanihan uses the phone and front door) |
 | Props (`PropVariantId`) | `WINDOW_PLAIN/BOARDED`, `YARD_LOOSE_ITEMS/SECURED`, `ENTRANCE_PLAIN/SANDBAGS`, `STAIRS_PLAIN/RAISED_BELONGINGS`, `LIVING_TABLE_EMPTY/FLASHLIGHT`, `GO_BAG_EMPTY/PARTIAL/READY`, plus the 12 decor variants (`MODERN_*`, `TRAD_*`) | Placed at `PropAnchor` points |
 | Interactable objects | One sprite per interactable in §5.1 (TV, phone, radio, cabinet, sink, clothes, documents, medicine cabinet, toolbox, shelf, drum, ladder, pet corner, door, go-bag, stairs, windows, shop counter, shop exit) | |
 | Weather and effects | `WeatherPreset` sky tints (6). `EffectId` particles/overlays (12): `RAIN_STREAKS, WINDOW_DRIPS, WIND_DEBRIS, TREE_SWAY, LIGHTNING_FLASH, MIST, PUDDLES, FLOOD_RIPPLES, FLICKERING_LIGHTS, DEBRIS_AFTERMATH, SUNBEAMS, DUST_MOTES` | |
@@ -593,7 +639,7 @@ Real `recordRun`: `newlyUnlocked: ["A01","A09"]`. A03 shows `progress: 15, targe
   2. Mount `<App/>`.
   3. Keep `harness.ts` until C1, then delete it.
 - **Dependencies:** none.
-- **Done when:** `npm run dev` shows the React root. `npm run build` passes. `npm test` (293) stays green.
+- **Done when:** `npm run dev` shows the React root. `npm run build` passes. `npm test` (322) stays green.
 - **CSP note:** production CSP is `script-src 'self'`, `style-src 'self' 'unsafe-inline'`, `img-src 'self' data:`, `connect-src 'none'`. Bundle all assets locally. If Phaser needs `blob:` for something, ask the backend owner to adjust `src/main/index.ts`.
 
 **F1 — EngineStore and services**
@@ -615,7 +661,7 @@ Real `recordRun`: `newlyUnlocked: ["A01","A09"]`. A03 shows `progress: 15, targe
 | **A1** Boot/Preload | Load assets by the IDs in §9 with a placeholder fallback | §9 | `game/config.ts`, `game/scenes/Boot.ts`, `Preload.ts`, `PhaserGame.tsx` | — | all | A progress bar; missing IDs logged, not crashing |
 | **A2** House map | Fixed layout; theme tileset swap; collision; anchors | `getWorldConfig()`, §4.2 | `assets/maps/house.tmj`, `game/data/layout.ts`, `game/scenes/House.ts` | `theme`, `interactables[]` | house tilesets | Both themes render the same collision; every interactable ID has an anchor |
 | **A3** Player + interaction | 4-direction movement at 90 px/s; 24 px prompts; E/Space → `interact` | §4.4 | `game/systems/PlayerController.ts`, `InteractionSystem.ts` | `interact`, `ActionOption` | player sprites | Walking into walls stops; the prompt appears at 24 px; interact opens a menu or event (checkpoint **C2** with B5) |
-| **A4** NPCs | Household NPCs, dependents, pets, Aling Nena | §4.3 | `game/systems/NpcSystem.ts` | `characters[]`, `npcCues` | NPC sprites | ≤ 3 NPCs placed; `NPC_M*` interact; Nena interactable; dependents never interactable |
+| **A4** NPCs | Household NPCs, dependents, pets | §4.3 | `game/systems/NpcSystem.ts` | `characters[]`, `npcCues` | NPC sprites | ≤ 3 NPCs placed; `NPC_M*` interact; dependents never interactable |
 | **A5** SceneDirective renderer | Weather, lighting, flood overlay, effects, props, NPC cues, audio, transitions | [FRONTEND_BACKEND_CONTRACTS.md](../implementation/FRONTEND_BACKEND_CONTRACTS.md) | `game/systems/SceneDirectiveRenderer.ts`, `AudioDirector.ts` | `SceneDirective`, `suggestScene`, `mergeSceneSuggestion` | §9 effects, lighting, flood, props, audio | Re-applying the same directive changes nothing; outage never shows electric light; the flood overlay equals `directive.flood`; ambient audio restarts only on a key change |
 | **A6** Other scenes | Shop, Street, Evacuation, HomeImpact, Aftermath; route `sceneChanged` | §2.4 | `game/scenes/*.ts` | `SceneId`, `skipToNextMilestone` | shop/center/street tilesets | Each `sceneChanged` loads the right scene; a full run traverses them (checkpoint **C3**) |
 | **A7** Wellbeing indicator | Player wellbeing meter (not "health") plus a toast on change | §5.11 | `ui/hud/Wellbeing.tsx` (shared with B4) | `player.wellbeing`, `wellbeingEvents` | icon | Shows `current/max`; a toast shows the rule `reason` when an event is appended |
@@ -633,7 +679,7 @@ Real `recordRun`: `newlyUnlocked: ["A01","A09"]`. A03 shows `progress: 15, targe
 | **B6** Inventory | House vs go-bag lists; missing go-bag categories | §5 items | `ui/inventory/*` | `state.house/goBag`, `ITEM_LABELS`, `missingGoBagItems` | Matches state after every action |
 | **B7** Shop | Catalog, quantity, purchase, errors | §5 shop | `ui/shop/*` | `getShopCatalog`, `purchase`, `RETURN_HOME` | Prices and stock from the engine; errors shown; `pause('shop')` while open |
 | **B8** Debrief + plan | Score and ending; categories; Handa breakdown; 12 badges with status; timeline; lessons; checklist (the plan); narration; `markPlanViewed` | `src/shared/contracts/debrief.ts`, §6.4 | `ui/debrief/*` | `evaluate`, `narrateDebrief`, `recordRun`, `markPlanViewed`, `getBadgeCatalog` | The ending label and Handa badge are visually separate; "Not applicable" is neutral; the plan view triggers A10 (checkpoint **C3**) |
-| **B9** Achievements | Screen with progress/target; unlock toasts from `newlyUnlocked` | §3 S12 | `ui/achievements/*` | `achievements.read`, `getAchievementCatalog` | Progress survives restart; each toast shows once |
+| **B9** Achievements | Screen with progress/target; unlock toasts from `newlyUnlocked`; mid-run badge toasts from `badgeEarned` (B06, §5.12) | §3 S12 | `ui/achievements/*` | `achievements.read`, `getAchievementCatalog` | Progress survives restart; each toast shows once |
 | **B10** Saves and replay | Continue/save slots, delete profile, replay | [LOCAL_STORAGE_SETUP.md](../setup/LOCAL_STORAGE_SETUP.md) | `ui/menus/*` | `save.*`, `profile.*`, `loadGame`, `startRun` | Save → quit → continue restores state; replay keeps the household with a new seed |
 | **B11** Settings | Volume, mute, text size | — | `ui/settings/*` | — (localStorage; gap G5) | Persists across restarts |
 
@@ -641,23 +687,21 @@ Real `recordRun`: `newlyUnlocked: ["A01","A09"]`. A03 shows `progress: 15, targe
 
 | Level | What | How |
 |---|---|---|
-| Backend contracts | Must stay green | `npm test` (293), `npm run typecheck` |
+| Backend contracts | Must stay green | `npm test` (322), `npm run typecheck` |
 | Store (F1) | Store applies results, de-duplicates events, caches directives | Vitest in `src/renderer/**/__tests__` (add to `vitest.config.ts` include, coordinating with the backend owner) |
 | Screens | S2–S4: valid and invalid inputs show the right errors. S7: Handa vs ending shown separately | Component tests or manual checklist |
 | World | Collision; prompts at 24 px; scene routing; directive application is idempotent; outage lighting | Manual checklist per A-task |
-| End to end | Launch → Custom → onboarding → customize → house → prepare (water, go-bag, Nena, windows) → events through EV16 → debrief with 12 badge statuses → achievements → replay | Manual run in `npm run dev` with the model **and** with `SIGNAL_LLM_DIR` set to a missing folder (fallback). Optionally Playwright for Electron (not installed) |
+| End to end | Launch → Custom → onboarding → customize → house → prepare (water, go-bag, windows) → check bulletin → share it (Bayanihan toast) → events through EV16 → debrief with 12 badge statuses → achievements (A08 progress) → replay; plus a late departure that crosses landfall (stays on STREET, arrives at EVACUATION, no EV10) | Manual run in `npm run dev` with the model **and** with `SIGNAL_LLM_DIR` set to a missing folder (fallback). Optionally Playwright for Electron (not installed) |
 | Packaged | Same flow from `dist\win-unpacked\SignalNo5.exe`, offline | [WINDOWS_PACKAGING.md](../setup/WINDOWS_PACKAGING.md) |
 
 ## 12. Backend gaps and blockers affecting the frontend
 
 | ID | Gap | Impact | Workaround / proposal |
 |---|---|---|---|
-| **BK-1** | **Late evacuation departure:** departing within ~2–4.5 h of landfall arrives *after* landfall. The scene becomes `HOME_IMPACT` and the shelter stays `home` while the household is in transit (reproduced 2026-10-09) | Inconsistent scene, and EV10 can fire for a household that left | **Proposed backend fix (needs approval):** block `FOLLOW_EVACUATION` when the arrival time would be after landfall, with the reason "Too late to travel safely; shelter in place and seek official help". Frontend: none needed |
+| ~~BK-1~~ | **Fixed (`20d1f2d`):** late departures crossing landfall stay in transit (`STREET`), departures that would arrive after route closure are rejected, and EV10 is home-only | — | Nothing for the frontend beyond §2.4 routing |
 | BK-2 | No tile coordinates or tilemap data (G3) | The frontend must author `layout.ts` and the map | Frontend-owned by design |
-| BK-3 | No dialogue text for world conversations (`TALK_TO_NENA`) or discovery results | The UI needs copy | Discovery: build from state (§6.3). Nena: use the placeholder in CONTENT_REVIEW until backend content is added |
-| BK-4 | Aling Nena has no scene-directive cue (G11) | Static presentation | Idle or waving; hide after the advisory |
+| BK-3 | No authored sentences for discovery results or for community-action results | The UI needs copy | Build from state (§6.3, §5.12); proposed templates in CONTENT_REVIEW §2 and §4 |
 | BK-5 | No state subscription (G1), no autosave (G2), no settings store (G5) | Store and UI must handle these | §2.1, §7; save on `phaseChanged` |
-| BK-6 | EV12 Aling Nena variant: the AI facts don't mention Aling Nena | AI text may not name her | Content proposal in CONTENT_REVIEW |
 | BK-7 | Playwright/E2E tooling not installed | No automated UI tests yet | Manual checklist, or add Playwright later |
 
-Nothing above blocks C1–C3. BK-1 should be fixed before the final demo.
+Nothing above blocks C1–C4.

@@ -21,7 +21,7 @@
 | C4 | `F_HAZARD_RESPONSE` lesson | "Stay indoors in the safest room and seek official help if needed." | Correct direction, but don't name a specific room type or claim a structure is safe. Keep it generic |
 | C5 | `F_UNSAFE_ACTION` / EV10 `GO_OUTSIDE_TO_CHECK` | "Do not go outside during a typhoon to check on conditions." | Matches standard advice. Keep; confirm wording |
 | C6 | B10 hint | "Arrange roof preparation early; never on the roof in a storm." | Roof work is a fall risk even before a storm. **Proposal:** "Have roof repairs done early by someone able to do them safely; never go on the roof once winds pick up." |
-| C7 | `HELP_NENA_PREPARE` label; B06 description | "Help Aling Nena pack and register for official assistance" | "Register" implies a specific official process that we haven't verified. **Proposal:** "Help Aling Nena pack and let the barangay know she may need help evacuating." |
+| C7 | B06 Bayanihan text; `SHARE_VERIFIED_ADVISORY` and `HELP_COMMUNITY_PREPARATION` labels; EV12__COMMUNITY | "Share the verified official advisory with neighbours"; "Help neighbours with the community preparedness activity"; "Neighbours are getting ready together. You can help while it is still safe outside, once your own preparations are on track." | **New wording (2026-10-10), needs review.** It deliberately avoids: entering floodwater, rescues, going next door after the advisory, sharing unverified messages, giving away household supplies, and any official registration or assistance procedure. Confirm that "community preparedness activity" (e.g. tying down shared loose items, clearing shared drains) matches what barangays actually organise, and that it's safe to recommend doing it *before* heavy rain |
 | C8 | `F_MEDICATION` / `F_MEDICAL_CHECK` / B04 | "…ask a health professional about continuity", "get one refill if needed" | Good: no dosages or medication names. Confirm that "one refill" isn't read as advice. **Proposal for the B04 hint:** "Check the medicine cabinet early and prepare what's needed, as advised by a health professional." |
 | C9 | `F_POWERED_EQUIPMENT` | "Plan backup power for essential equipment." | Must not imply that the game gives medical-device guidance. **Proposal:** add "…and ask the equipment provider or a health professional what to do during outages." |
 | C10 | Fictional advisories: EV01, EV06, EV08, EV15 | e.g. "Fictional advisory: an evacuation advisory has been issued for your area." | Fine as long as "fictional" stays visible. **Never** show PAGASA signal numbers, logos or real bulletin formats. The UI must keep the "fictional" label (blueprint §8) |
@@ -31,20 +31,26 @@
 | C14 | `F_LATE_PURCHASE` | "Prices and availability can get worse as a storm gets closer; buy supplies early." | Reasonable. Keep; avoid implying price gouging is legal or illegal |
 | C15 | `F_DESTINATION` / B11 | "Find out where your designated evacuation center is." | Correct. Must not name real centers or routes (the backend doesn't) |
 
-## 2. Aling Nena dialogue
+## 2. Community assistance (Bayanihan) wording
 
-| Where | Current | Assessment / proposal |
+The former named neighbour character, her dialogue and the "register for official assistance" action were **removed** on 2026-10-10 (`01eaf7f`). Old saves and progress are migrated (`src/core/migrations.ts`). Bayanihan now comes from two safe, engine-validated actions with no new character:
+
+| Where | Current text | Safety notes / review |
 |---|---|---|
-| EV12__NEIGHBOR fallback | "Aling Nena next door lives alone. She is asking if someone can help her get ready." / "Aling Nena waves from across the fence." | Respectful; no age stereotyping. **Keep.** |
-| EV12 AI facts (`facts` of EV12 in `src/core/content/events.ts`) | The approved facts for the NEIGHBOR variant don't mention Aling Nena | **Proposal (BK-6):** add the fact "A neighbour, Aling Nena, lives alone next door and asked for help getting ready" so AI text stays grounded and can name her |
-| `TALK_TO_NENA` (world conversation) | **No authored line exists** (gap BK-3) | **Proposed placeholder lines for the frontend** (until backend content exists): before the advisory, "Salamat sa pagdalaw. I'm not sure I can pack everything by myself." After helping: "Salamat! I feel more ready now." After the advisory: "Mag-ingat kayo. Follow what the barangay says." |
-| Post-advisory behaviour | `HELP_NENA_PREPARE` is rejected after the advisory | Proposed UI copy for the rejection: "It's no longer safe to go next door. Let the barangay know she may need help." Wording only; the rule is unchanged |
+| `SHARE_VERIFIED_ADVISORY` (phone) | Label "Share the verified official advisory with neighbours"; disabled reason "Check official information first; only verified information should be shared."; late reason "It is too late to send updates now; keep the phone for your household." | Encourages verified-only sharing and keeping the phone charged for the household. Review wording |
+| `HELP_COMMUNITY_PREPARATION` (front door) | Label "Help neighbours with the community preparedness activity"; reasons "Follow the evacuation advisory now; community activities have stopped.", "Not enough time to finish safely before conditions worsen.", "Conditions outside are no longer safe for this task." | Only before heavy rain or the advisory; never a rescue; doesn't use household supplies. Review C7 |
+| EV12__COMMUNITY fallback | "Neighbours are getting ready together. You can help while it is still safe outside, once your own preparations are on track." / "Neighbours tie down loose items along the street." | Puts household readiness first. Spoken by a household member, or by the generic `NPC_NEIGHBOR` voice for single-person households |
+| EV12__COMMUNITY AI facts | "Neighbours are preparing for the storm together." · "Helping is optional and only while it is still safe outside." · "Only verified official information should be shared." | Grounds the local AI; it can't invent procedures or characters (allowed speakers and actions are fixed) |
+| B06 description / hint | "Helped the community safely: shared verified official information or joined a community preparedness activity while it was still safe." / "After checking official information, share it from the phone, or help with the community activity at the front door before heavy rain." | Matches the rule |
+| A08 description | "Complete a Bayanihan community-assistance action in five different completed runs." | Neutral |
+
+**Proposed result copy for the frontend** (BK-3; wording only, no rules): after sharing, "You shared the verified advisory. Neighbours now know where to find official updates." After helping, "You helped neighbours secure shared areas before the weather turned." Neither should promise outcomes for other households.
 
 ## 3. Badge, achievement and lesson text
 
 - **Badges B01–B12** (`src/core/content/badges.ts`):
   - Descriptions accurately match the rules (checked against `src/core/evaluation/badges.ts`).
-  - Only C6, C7 and C8 need wording review.
+  - Only C6, C7 (new community wording) and C8 need wording review.
   - **B01 Handa** says "at least 85% wellbeing and every applicable critical preparedness requirement". That's correct, and it's a *different thing* from the **Handa ending** (score ≥ 85). Keep the two separate in UI copy.
 - **Achievements A01–A10** (`src/core/content/achievements.ts`):
   - These are neutral progress text with no safety claims, so no review is needed.

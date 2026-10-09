@@ -109,4 +109,26 @@ describe('blueprint §6 examples', () => {
     expect(viewed.find((a) => a.id === 'A10')!.unlocked).toBe(true);
     if (DUMP) writeFileSync(join(DUMP, 'debrief.json'), JSON.stringify({ evaluation: { ...ev, timeline: ev.timeline.slice(0, 3), categories: ev.categories.slice(0, 2) }, narration, recordRun: { newlyUnlocked: rec.newlyUnlocked, achievements: rec.achievements.slice(0, 3) } }, null, 2));
   });
+  it('6.5 phone → verified bulletin → share → Bayanihan → A08', async () => {
+    const r = createGame({ schemaVersion: 1, mode: 'random', r1SizeRange: '1', r2PlayerAge: 'age18to35', r3OtherAgeGroups: [] }, { seed: 4 });
+    if (!r.ok) throw new Error('setup');
+    const engine = r.engine;
+    engine.resolveEvent('DEFER');                                       // EV01 dismissed without checking anything
+    const menu = engine.interact('LIVING_PHONE');
+    if (!menu.ok) throw new Error(menu.error.message);
+    const share = menu.actions.find((a) => a.actionId === 'SHARE_VERIFIED_ADVISORY')!;
+    expect(share).toMatchObject({ available: false, reasons: ['Check official information first; only verified information should be shared.'] });
+    expect(engine.executeAction('CHECK_BULLETIN').ok).toBe(true);
+    const res = engine.executeAction('SHARE_VERIFIED_ADVISORY');
+    if (!res.ok) throw new Error(res.error.message);
+    expect(res.decision!.actionId).toBe('SHARE_VERIFIED_ADVISORY');
+    expect(res.state.decisionLog.at(-1)!.actionId).toBe('SHARE_VERIFIED_ADVISORY');
+    expect(res.events).toContainEqual({ type: 'badgeEarned', badgeId: 'B06' });
+    expect(engine.evaluate().badges.find((b) => b.id === 'B06')!.status).toBe('earned');
+    expect(engine.getBadgeCatalog().find((b) => b.id === 'B06')!.iconAssetId).toBe('badge_b06_bayanihan');
+    const final = playDiligently(engine);
+    const store = new SaveStore(mkdtempSync(join(tmpdir(), 'doc65-')));   // main-process side of achievements.recordRun
+    const { achievements } = await store.recordCompletedRun(final);
+    expect(achievements.find((a) => a.id === 'A08')).toMatchObject({ progress: 1, target: 5, unlocked: false });
+  });
 });

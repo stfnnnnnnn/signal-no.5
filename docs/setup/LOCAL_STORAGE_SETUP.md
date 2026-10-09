@@ -19,7 +19,7 @@
     games\<slot>.json     GameState (one file per save slot)
     profile.json          HouseholdProfile (optional, player-controlled)
     badges.json           { schemaVersion: 2, badgeIds: [...] } (earned across runs; v1 files reset)
-    progress.json         { schemaVersion: 1, runs: RunSummary[], plansViewed: [], unlocked: { A01: ISO, … } } (achievements)
+    progress.json         { schemaVersion: 2, runs: RunSummary[], plansViewed: [], unlocked: { A01: ISO, … } } (achievements; v1 migrated on read)
   llm-server.json         PID file for the local model server (identity check on next launch)
   llm-server.log          llama-server log: startup lines and timings only (no prompts)
   selftest.json           only written by `SignalNo5.exe --self-test`
@@ -39,7 +39,7 @@
 | Decision history | Inside the game save | `decisionLog[]` (`DecisionRecord` with before/after snapshots) |
 | Event history | Inside the game save | `eventHistory[]`, `firedMilestones[]` |
 | Badges | `badges.json` (schema v2) | Persists across runs; merged and de-duplicated by `addBadges` (also by `recordCompletedRun`) |
-| Achievement progress | `progress.json` | Run summaries (run ID, storm seed, mode, exposure, budget tier, score, Handa result, wellbeing %, badges, lesson IDs, rumour and Aling Nena flags). **No household or medical data.** Written by `recordCompletedRun` (main re-evaluates the state; idempotent per run ID; abandoned runs rejected) |
+| Achievement progress | `progress.json` | Run summaries (run ID, storm seed, mode, exposure, budget tier, score, Handa result, wellbeing %, badges, lesson IDs, rumour flags, `communityHelpCompleted`/`communityHelpActionId`). **No household or medical data.** v1 files from before the Bayanihan revision are migrated on read (`src/core/migrations.ts`); nothing is reset. Written by `recordCompletedRun` (main re-evaluates the state; idempotent per run ID; abandoned runs rejected) |
 | Generated dialogue cache | **Not persisted** | In-memory in `AIService`, keyed by `runId:eventId:variantId`; cleared when the app quits |
 | Configuration preferences (volume, etc.) | **Not implemented** | Gap: no settings store exists yet |
 
@@ -99,10 +99,10 @@ const r = saved ? loadGame(saved) : null;   // { ok: true, engine } | { ok: fals
 
 ## 6. Validation and schema versions
 
-- `GameState` and `HouseholdProfile` carry `schemaVersion: 2`. Badges use `schemaVersion: 1`.
+- `GameState` and `HouseholdProfile` carry `schemaVersion: 2`. `badges.json` and `progress.json` use `schemaVersion: 2`.
 - **Writes:** `writeGame`/`writeProfile` call `.parse()`, so invalid data throws and nothing is written. Over IPC the promise rejects.
 - **Reads:** `readGame`/`readProfile` call `.safeParse()`. **Invalid JSON, a corrupted file or a different schema version returns `null`** (the file is left untouched). `loadGame(raw)` in the engine returns `{ ok: false, error: { code: 'INVALID_SAVE', issues } }` for anything that doesn't match.
-- **No migrations exist.** A save from an older schema version will not load (gap; acceptable for the hackathon).
+- **Only one migration exists:** saves and `progress.json` v1 written before the Bayanihan revision are converted on load (`src/core/migrations.ts`: the removed neighbour action/flags become the generic community-assistance equivalents). Other older schema versions will not load (gap; acceptable for the hackathon).
 
 ## 7. Privacy and security
 
