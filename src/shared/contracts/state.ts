@@ -31,6 +31,10 @@ export const StormConfig = z.object({
   /** Authored peak flood severity for this household's scenario tags (SPEC_RECONCILIATION R4). */
   peakFloodSeverity: Severity,
   peakWindSeverity: z.enum(['low', 'moderate', 'severe']),
+  /** Fictional environmental exposure profile (difficulty); defaults keep older saves loadable. */
+  exposure: z.enum(['standard', 'waterway', 'floodProne', 'both', 'unknown']).default('unknown'),
+  floodOnsetHoursBeforeLandfall: z.number().min(0).max(12).default(0),
+  advisoryLeadHours: z.number().min(0).max(8).default(0),
 });
 export type StormConfig = z.infer<typeof StormConfig>;
 

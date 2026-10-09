@@ -138,7 +138,7 @@ describe('milestones and scheduling', () => {
       const landfallAt = done.eventHistory.find((h) => h.eventId === 'EV10' || h.eventId === 'EV11')?.atMinute ?? Infinity;
       expect(landfallAt).toBeGreaterThanOrEqual(40 * H);
       expect(landfallAt).toBeLessThanOrEqual(43 * H);
-      if (done.storm.evacuationAdvisoryEvent) expect(done.eventHistory.find((h) => h.eventId === 'EV08')!.atMinute).toBe(32 * H);
+      if (done.storm.evacuationAdvisoryEvent) expect(done.eventHistory.find((h) => h.eventId === 'EV08')!.atMinute).toBe((32 - done.storm.advisoryLeadHours) * H);
     }
     expect(found).toBe(true);
   });

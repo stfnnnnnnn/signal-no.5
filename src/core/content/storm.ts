@@ -8,28 +8,36 @@ import * as sel from '../selectors';
 export const DEFAULT_LANDFALL_HOUR = 48;
 const SEVERITY: Severity[] = ['none', 'low', 'moderate', 'severe'];
 
-/** Authored flood severity from scenario tags (surroundings + history), ±1 level by seed. Not a prediction. */
-function floodSeverity(p: HouseholdProfile, seed: number): Severity {
-  const base = ({ coastal: 2, waterway: 2, lowLying: 2, residential: 1, hillside: 0, other: 1, notSure: 1 } as const)[p.housing.surroundings];
-  const hist = ({ never: 0, rarely: 0, occasionally: 1, frequently: 1, notSure: 0 } as const)[p.housing.floodHistory];
-  const shift = createRng(deriveSeed(seed, 'storm:flood')).weighted<number>([[-1, 25], [0, 50], [1, 25]]);
-  return SEVERITY[Math.max(0, Math.min(3, base + hist + shift))]!;
-}
+/**
+ * Environmental difficulty profiles (fictional training conditions, never real flood-risk predictions).
+ * Deterministic per exposure; only flood-prone varies between moderate and severe by seed.
+ */
+export const EXPOSURE_PROFILES: Record<HouseholdProfile['exposure'], { peak: Severity[]; onsetHours: number; risingAtHours: number | null; advisoryLeadHours: number; alwaysAdvisory: boolean; fictional: true; description: string }> = {
+  standard: { peak: ['low'], onsetHours: 0, risingAtHours: null, advisoryLeadHours: 0, alwaysAdvisory: false, fictional: true, description: 'Standard exposure (fictional): minor flooding at landfall.' },
+  waterway: { peak: ['moderate'], onsetHours: 4, risingAtHours: null, advisoryLeadHours: 2, alwaysAdvisory: true, fictional: true, description: 'Near a waterway (fictional): earlier flood complications and an earlier advisory.' },
+  floodProne: { peak: ['moderate', 'severe'], onsetHours: 6, risingAtHours: 2, advisoryLeadHours: 2, alwaysAdvisory: true, fictional: true, description: 'Low-lying (fictional): faster flood escalation and an earlier advisory.' },
+  both: { peak: ['severe'], onsetHours: 6, risingAtHours: 2, advisoryLeadHours: 4, alwaysAdvisory: true, fictional: true, description: 'Waterway and low-lying (fictional): highest supported difficulty, earliest advisory.' },
+  unknown: { peak: ['moderate'], onsetHours: 0, risingAtHours: null, advisoryLeadHours: 0, alwaysAdvisory: false, fictional: true, description: 'Unknown exposure (fictional default profile): moderate flooding at the storm peak.' },
+};
 
 export function createStormConfig(p: HouseholdProfile, seed: number): StormConfig {
   const rng = createRng(deriveSeed(seed, 'storm'));
-  const flood = floodSeverity(p, seed);
+  const profile = EXPOSURE_PROFILES[p.exposure];
+  const flood = createRng(deriveSeed(seed, 'storm:flood')).pick(profile.peak);
   return {
     stormSeed: seed,
     landfallAccelerationHours: rng.pick([0, 4, 8] as const),
     powerOutageEvent: rng.chance(0.85),
     roadClosureEvent: rng.chance(0.6),
     shopClosureEvent: true,
-    // The advisory is authored for flood-prone households; otherwise it appears in about half of runs.
-    evacuationAdvisoryEvent: flood === 'moderate' || flood === 'severe' || rng.chance(0.5),
+    // Always authored for flood-related exposure; otherwise when flooding is moderate+, or in about half of runs.
+    evacuationAdvisoryEvent: profile.alwaysAdvisory || flood === 'moderate' || flood === 'severe' || rng.chance(0.5),
     misinformationEvent: rng.chance(0.7),
     peakFloodSeverity: flood,
     peakWindSeverity: rng.pick(['moderate', 'severe'] as const),
+    exposure: p.exposure,
+    floodOnsetHoursBeforeLandfall: profile.onsetHours,
+    advisoryLeadHours: profile.advisoryLeadHours,
   };
 }
 
@@ -58,9 +66,16 @@ export function milestones(s: GameState): Milestone[] {
     { id: 'H32_DILEMMA', minute: 32 * H, eventId: 'EV12' },
   ];
   if (st.misinformationEvent) list.push({ id: 'H28_RUMOR', minute: 28 * H, eventId: 'EV07' });
-  if (st.evacuationAdvisoryEvent) list.push({ id: 'EVAC_ADVISORY', minute: L - 8 * H, eventId: 'EV08', critical: true,
-    apply: (x) => { x.environment.evacuationAdvisoryIssued = true; x.environment.weatherState = 'heavyRain'; } });
-  else list.push({ id: 'HEAVY_RAIN', minute: L - 8 * H, apply: (x) => { x.environment.weatherState = 'heavyRain'; } });
+  const advisoryAt = L - (8 + (st.advisoryLeadHours ?? 0)) * H;
+  if (st.evacuationAdvisoryEvent) list.push({ id: 'EVAC_ADVISORY', minute: advisoryAt, eventId: 'EV08', critical: true,
+    apply: (x) => { recordDeadlineSnapshot(x); x.environment.evacuationAdvisoryIssued = true; } });
+  list.push({ id: 'HEAVY_RAIN', minute: L - 8 * H, apply: (x) => { if (!x.storm.evacuationAdvisoryEvent) recordDeadlineSnapshot(x); x.environment.weatherState = 'heavyRain'; } });
+  const ep = EXPOSURE_PROFILES[st.exposure ?? 'unknown'];
+  const peakRank = SEVERITY.indexOf(st.peakFloodSeverity);
+  if (st.floodOnsetHoursBeforeLandfall > 0 && peakRank >= 1) list.push({ id: 'FLOOD_ONSET', minute: L - st.floodOnsetHoursBeforeLandfall * H,
+    apply: (x) => { if (x.environment.floodSeverity === 'none') x.environment.floodSeverity = 'low'; } });
+  if (ep.risingAtHours !== null && peakRank >= 2) list.push({ id: 'FLOOD_RISING', minute: L - ep.risingAtHours * H,
+    apply: (x) => { if (SEVERITY.indexOf(x.environment.floodSeverity) < 2) x.environment.floodSeverity = 'moderate'; } });
   if (st.shopClosureEvent) list.push({ id: 'SHOP_CLOSURE', minute: L - 6 * H, apply: (x) => { x.environment.shopOpen = false; } });
   if (st.powerOutageEvent) list.push({ id: 'POWER_OUTAGE', minute: L - 4 * H, eventId: 'EV09', apply: (x) => { x.environment.powerAvailable = false; } });
   if (st.roadClosureEvent) {
@@ -92,6 +107,16 @@ export function milestones(s: GameState): Milestone[] {
 
 /** Tie-break for milestones at the same minute: advisory > evacuation > hazard > dilemma > reminder. */
 const PRIORITY = (m: Milestone) => (m.eventId ? ({ EV01: 0, EV06: 0, EV08: 1, EV11: 1, EV09: 2, EV10: 2, EV13: 2, EV07: 3, EV12: 3 } as Record<string, number>)[m.eventId] ?? 4 : -1);
+
+/** Preparation deadline (advisory, or heavy rain when no advisory): snapshot for timing-based badges. */
+function recordDeadlineSnapshot(s: GameState) {
+  if (s.counters.pd_recorded) return;
+  s.counters.pd_recorded = 1;
+  s.counters.pd_minute = s.clock.gameMinutes;
+  s.counters.pd_goBagReady = sel.goBagStatus(s) === 'ready' ? 1 : 0;
+  s.counters.pd_windows = s.counters.windowsBoarded ?? 0;
+  s.counters.pd_roof = s.flags.ROOF_SECURED ? 1 : 0;
+}
 
 /** What the household actually has when the storm arrives (evacuees only have their go-bag). Used by scoring. */
 function recordLandfallSnapshot(s: GameState) {
