@@ -183,3 +183,5 @@ button.hud-btn { width: auto; padding: 1px 8px; font-size: .85rem; border-width:
 .timeline span { color: var(--muted); }
 .checklist.plan li { color: var(--ink); }
 @media print { .row-actions, .hud, .toasts { display: none; } .panel { border: none; box-shadow: none; } body { background: #fff; color: #000; } }
+/* toasts sit bottom-left so they never cover side panels or the HUD */
+.toasts { top: auto; bottom: 16px; left: 16px; right: auto; }

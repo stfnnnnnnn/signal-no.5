@@ -1,6 +1,7 @@
 // What the HUD shows, derived only from engine state (no rules computed here).
 import { FINDING_BY_ID } from '../../../core/content/findings';
 import { OBJECTIVES } from '../../../core/evaluation/objectives';
+import { TIME_SCALES } from '../../../shared/contracts/ids';
 import type { GameState } from '../../../shared/contracts/state';
 import { formatClock } from '../format';
 
@@ -42,6 +43,12 @@ export const newWellbeingEvents = (seen: number, s: GameState) => s.player.wellb
 /** The run's applicable objectives, worded with the backend's checklist text. */
 export function objectivesView(s: GameState): { id: string; text: string; met: boolean }[] {
   return OBJECTIVES.filter((o) => o.applicable(s)).map((o) => ({ id: o.id, text: FINDING_BY_ID.get(o.findingId)?.checklist ?? o.id, met: o.met(s) }));
+}
+
+/** Next faster (+1) or slower (-1) engine time scale, clamped to the ends ([ and ] keys). */
+export function stepSpeed(current: number, dir: 1 | -1): number {
+  const i = TIME_SCALES.indexOf(current as (typeof TIME_SCALES)[number]);
+  return TIME_SCALES[Math.max(0, Math.min(TIME_SCALES.length - 1, (i < 0 ? 0 : i) + dir))]!;
 }
 
 /** Blueprint §7: after landfall/departure, a Continue button skips to the next milestone when nothing is waiting. */

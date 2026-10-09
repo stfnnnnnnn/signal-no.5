@@ -20,7 +20,7 @@ export function Hud({ onSave }: { onSave?: () => void }) {
         <span className="clock">{h.clock}</span>
         <span className="phase">{h.phase}</span>
         {h.countdownHours !== null && <span className="countdown">Landfall in about {h.countdownHours} h</span>}
-        <div className="speeds" role="group" aria-label="Game speed">
+        <div className="speeds" role="group" aria-label="Game speed ([ slower, ] faster)">
           {TIME_SCALES.map((x) => (
             <button key={x} className={x === h.speed ? 'speed on' : 'speed'} aria-pressed={x === h.speed} onClick={() => setSpeed(x)}>{x}×</button>
           ))}

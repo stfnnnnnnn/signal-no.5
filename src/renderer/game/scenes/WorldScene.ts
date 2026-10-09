@@ -13,6 +13,7 @@ import { phaserSceneFor, type WorldScene as WorldKey } from '../directive';
 import { CHARACTER_FRAMES, charKey, type Dir, type SpriteBase } from '../assets';
 import { tintFor } from '../palette';
 import { SceneDirectiveRenderer, type RendererOptions } from '../systems/SceneDirectiveRenderer';
+import { onSceneEnd } from '../sceneLifecycle';
 
 const SPEED = 90;
 type KeyName = 'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd';
@@ -74,7 +75,7 @@ export abstract class WorldScene extends Phaser.Scene {
     const unsub = directives.subscribe(() => { if (directives.current) this.directiveView.apply(directives.current); });
     if (directives.current) { this.directiveView.enter(directives.current); this.directiveView.apply(directives.current); }
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    onSceneEnd(this, () => {
       unsub();
       this.input.keyboard?.off('keydown-E', this.tryInteract, this);
       this.input.keyboard?.off('keydown-SPACE', this.tryInteract, this);

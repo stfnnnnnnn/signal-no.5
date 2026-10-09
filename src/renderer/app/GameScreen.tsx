@@ -4,7 +4,7 @@ import { store } from '../state/engineStore';
 import { useApp, useEngineState, useUi } from '../state/hooks';
 import { openPanel } from '../state/interactionController';
 import { ui } from '../state/uiStore';
-import { canContinue, newWellbeingEvents } from '../ui/hud/hudModel';
+import { canContinue, newWellbeingEvents, stepSpeed } from '../ui/hud/hudModel';
 import { Hud } from '../ui/Hud';
 import { InteractionPrompt } from '../ui/InteractionPrompt';
 import { InteractionMenu } from '../ui/InteractionMenu';
@@ -40,6 +40,10 @@ export function GameScreen() {
       if (e.repeat || ui.isBlocking()) return;
       if (e.key === 'i' || e.key === 'I') openPanel('inventory');
       if (e.key === 'o' || e.key === 'O') openPanel('objectives');
+      if ((e.key === ']' || e.key === '[') && store.state) {
+        const next = stepSpeed(store.state.clock.timeScale, e.key === ']' ? 1 : -1);
+        store.dispatch((en) => en.setSpeed(next));
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

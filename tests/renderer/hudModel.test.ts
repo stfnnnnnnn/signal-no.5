@@ -55,3 +55,14 @@ describe('wellbeing reasons and objectives', () => {
     expect(objectivesView(store.state!).find((o) => o.id === 'O_BULLETIN')?.met).toBe(true);
   });
 });
+
+import { stepSpeed } from '../../src/renderer/ui/hud/hudModel';
+describe('speed shortcuts', () => {
+  it('steps through the engine time scales and stops at the ends', () => {
+    expect(stepSpeed(1, 1)).toBe(2);
+    expect(stepSpeed(16, 1)).toBe(32);
+    expect(stepSpeed(32, 1)).toBe(32);
+    expect(stepSpeed(4, -1)).toBe(2);
+    expect(stepSpeed(1, -1)).toBe(1);
+  });
+});

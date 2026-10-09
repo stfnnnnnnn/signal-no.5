@@ -7,6 +7,7 @@ import { TILE } from '../layout';
 import { PROP_TEXTURE } from '../textures';
 import { floodAlpha, lightingLook, rainRate, windDrift } from '../visuals';
 import { audio } from './AudioDirector';
+import { onSceneEnd } from '../sceneLifecycle';
 
 export interface RendererOptions { worldW: number; worldH: number; propAnchors?: Partial<Record<PropAnchor, { tx: number; ty: number }>>; dripAt?: { x: number; y: number } }
 
@@ -41,7 +42,7 @@ export class SceneDirectiveRenderer {
       x: { min: 0, max: cam.width }, y: { min: 0, max: cam.height }, lifespan: 3000, speedY: { min: -6, max: 6 }, speedX: { min: -6, max: 6 }, alpha: { start: 0.8, end: 0 }, emitting: false,
     }).setScrollFactor(0).setDepth(898);
     this.drips = o.dripAt ? scene.add.particles(o.dripAt.x, o.dripAt.y, 'fx_drip', { x: { min: -6, max: 6 }, lifespan: 500, speedY: 60, frequency: 220, emitting: false }).setDepth(30) : null;
-    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.flicker?.remove(); this.ripple?.remove(); });
+    onSceneEnd(scene, () => { this.flicker?.remove(); this.ripple?.remove(); });
   }
 
   /** Called every frame: keeps the flashlight glow on the player. */
