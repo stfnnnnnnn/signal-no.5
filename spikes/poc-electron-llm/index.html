@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'none'; img-src 'self' data:">
+  <title>Signal No. 5 — PoC</title>
+  <style>
+    body { background: #10141f; color: #e8e6d9; font: 15px/1.5 monospace; margin: 24px; }
+    h1 { font-size: 18px; color: #f2c14e; } button { font: inherit; margin: 4px 6px 4px 0; padding: 6px 10px; background: #2b3550; color: #e8e6d9; border: 2px solid #f2c14e; cursor: pointer; }
+    .card { border: 2px solid #3d4a6b; padding: 10px 14px; margin: 10px 0; } .ai { border-color: #5fb36a; } .fallback { border-color: #d9734e; }
+    .tag { font-size: 12px; padding: 1px 6px; border: 1px solid currentColor; } #status { color: #9fd0ff; }
+  </style>
+</head>
+<body>
+  <h1>SIGNAL NO. 5 — Electron → llama-server PoC (throwaway)</h1>
+  <p>Model server: <span id="status">checking…</span></p>
+  <button id="gen">Generate</button>
+  <button data-inject="badjson">Inject: bad JSON</button>
+  <button data-inject="unknownAction">Inject: unknown action</button>
+  <button data-inject="overlength">Inject: over-length</button>
+  <button data-inject="duplicate">Inject: duplicate actions</button>
+  <div id="out"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>

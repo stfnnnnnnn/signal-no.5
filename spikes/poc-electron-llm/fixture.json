@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "eventId": "HOUSEHOLD_PLAN",
+  "phase": "preparation",
+  "household": { "homeType": "singleStory", "occupants": "withOthers", "assistanceNeeded": "yes", "essentialSupplies": "preferNotToSay", "goBagStatus": "partial" },
+  "state": { "tick": 4, "tickBudget": 12, "flags": { "WARNING_CHECKED": true, "GO_BAG_PACKED": false }, "inventory": ["PHONE", "WATER"] },
+  "recentDecisions": [{ "eventId": "SUPPLY_CHECK", "actionId": "INSPECT_SUPPLIES" }],
+  "allowedVariantIds": ["HOUSEHOLD_PLAN__WITH_OTHERS", "HOUSEHOLD_PLAN__ASSISTANCE"],
+  "allowedActionIds": ["AGREE_MEETING_PLAN", "PLAN_ASSISTANCE", "DELAY"],
+  "allowedSpeakers": ["NPC_FAMILY_MEMBER"],
+  "limits": { "dialogueMaxChars": 200, "descriptionMaxChars": 160 }
+}

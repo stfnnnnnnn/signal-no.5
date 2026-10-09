@@ -1,0 +1,11 @@
+node_modules/
+dist/
+out/
+coverage/
+*.log
+# Large binaries are never committed: models, runtime, build output
+*.gguf
+vendor/llm/
+spikes/**/node_modules/
+spikes/**/dist/
+.remember/

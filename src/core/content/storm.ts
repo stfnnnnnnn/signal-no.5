@@ -1,0 +1,139 @@
+// Storm configuration and milestone timeline (GD §9). Authored, seed-varied, never "forecast".
+import type { EventId } from '../../shared/contracts/ids';
+import type { HouseholdProfile } from '../../shared/contracts/household';
+import type { GameState, Severity, StormConfig } from '../../shared/contracts/state';
+import { createRng, deriveSeed } from '../rng';
+import * as sel from '../selectors';
+
+export const DEFAULT_LANDFALL_HOUR = 48;
+const SEVERITY: Severity[] = ['none', 'low', 'moderate', 'severe'];
+
+/** Authored flood severity from scenario tags (surroundings + history), ±1 level by seed. Not a prediction. */
+function floodSeverity(p: HouseholdProfile, seed: number): Severity {
+  const base = ({ coastal: 2, waterway: 2, lowLying: 2, residential: 1, hillside: 0, other: 1, notSure: 1 } as const)[p.housing.surroundings];
+  const hist = ({ never: 0, rarely: 0, occasionally: 1, frequently: 1, notSure: 0 } as const)[p.housing.floodHistory];
+  const shift = createRng(deriveSeed(seed, 'storm:flood')).weighted<number>([[-1, 25], [0, 50], [1, 25]]);
+  return SEVERITY[Math.max(0, Math.min(3, base + hist + shift))]!;
+}
+
+export function createStormConfig(p: HouseholdProfile, seed: number): StormConfig {
+  const rng = createRng(deriveSeed(seed, 'storm'));
+  const flood = floodSeverity(p, seed);
+  return {
+    stormSeed: seed,
+    landfallAccelerationHours: rng.pick([0, 4, 8] as const),
+    powerOutageEvent: rng.chance(0.85),
+    roadClosureEvent: rng.chance(0.6),
+    shopClosureEvent: true,
+    // The advisory is authored for flood-prone households; otherwise it appears in about half of runs.
+    evacuationAdvisoryEvent: flood === 'moderate' || flood === 'severe' || rng.chance(0.5),
+    misinformationEvent: rng.chance(0.7),
+    peakFloodSeverity: flood,
+    peakWindSeverity: rng.pick(['moderate', 'severe'] as const),
+  };
+}
+
+export interface Milestone {
+  id: string;
+  minute: number;
+  /** Mandatory event to raise (if eligible at fire time). */
+  eventId?: EventId;
+  /** Resets the speed to 1× (GD §3 critical phase). */
+  critical?: boolean;
+  apply?: (s: GameState) => void;
+}
+
+/** Timeline for the current state. Milestones relative to landfall move when landfall accelerates. */
+export function milestones(s: GameState): Milestone[] {
+  const H = sel.HOUR;
+  const L = s.landfallMinute;
+  const st = s.storm;
+  const list: Milestone[] = [
+    { id: 'H0_ADVISORY', minute: 0, eventId: 'EV01', apply: (x) => { x.environment.officialAdvisoryIssued = true; } },
+    { id: 'H8_REMINDER', minute: 8 * H, eventId: 'EV02' },
+    { id: 'H12_COORDINATION', minute: 12 * H, eventId: 'EV03' },
+    { id: 'H16_SUPPLY', minute: 16 * H, eventId: 'EV04' },
+    { id: 'H20_MEDICAL', minute: 20 * H, eventId: 'EV05' },
+    { id: 'H24_UPDATE', minute: 24 * H, eventId: 'EV06', apply: (x) => { x.environment.landfallRevealed = true; x.environment.weatherState = 'rain'; if (x.phase === 'preparation') x.phase = 'warning'; } },
+    { id: 'H32_DILEMMA', minute: 32 * H, eventId: 'EV12' },
+  ];
+  if (st.misinformationEvent) list.push({ id: 'H28_RUMOR', minute: 28 * H, eventId: 'EV07' });
+  if (st.evacuationAdvisoryEvent) list.push({ id: 'EVAC_ADVISORY', minute: L - 8 * H, eventId: 'EV08', critical: true,
+    apply: (x) => { x.environment.evacuationAdvisoryIssued = true; x.environment.weatherState = 'heavyRain'; } });
+  else list.push({ id: 'HEAVY_RAIN', minute: L - 8 * H, apply: (x) => { x.environment.weatherState = 'heavyRain'; } });
+  if (st.shopClosureEvent) list.push({ id: 'SHOP_CLOSURE', minute: L - 6 * H, apply: (x) => { x.environment.shopOpen = false; } });
+  if (st.powerOutageEvent) list.push({ id: 'POWER_OUTAGE', minute: L - 4 * H, eventId: 'EV09', apply: (x) => { x.environment.powerAvailable = false; } });
+  if (st.roadClosureEvent) {
+    list.push({ id: 'ROAD_RESTRICTED', minute: L - 4 * H, apply: (x) => { if (x.environment.roadStatus === 'open') x.environment.roadStatus = 'restricted'; } });
+    list.push({ id: 'ROAD_CLOSED', minute: L - 2 * H, apply: (x) => { x.environment.roadStatus = 'closed'; } });
+  }
+  list.push(
+    { id: 'LANDFALL', minute: L, critical: true, apply: (x) => {
+      recordLandfallSnapshot(x);
+      x.environment.weatherState = 'typhoon';
+      x.environment.windSeverity = 'moderate';
+      x.environment.roadStatus = 'closed';
+      x.environment.shopOpen = false;
+      if (x.environment.floodSeverity === 'none' && st.peakFloodSeverity !== 'none') x.environment.floodSeverity = 'low';
+      x.phase = 'impact';
+      x.scene = x.evacuation.currentShelter === 'home' ? 'HOME_IMPACT' : 'EVACUATION';
+    } },
+    { id: 'PEAK', minute: L + 3 * H, eventId: 'EV10', critical: true, apply: (x) => applyPeak(x) },
+    { id: 'IMPACT_END', minute: L + 6 * H, eventId: 'EV13', apply: (x) => applyImpactEnd(x) },
+    { id: 'AFTERMATH_DAY1', minute: L + 12 * H, eventId: 'EV14', apply: (x) => { x.phase = 'aftermath'; x.scene = 'AFTERMATH'; x.aftermathDay = 1; x.environment.weatherState = 'clear'; } },
+    { id: 'AFTERMATH_DAY2', minute: L + 36 * H, eventId: 'EV15', apply: (x) => { x.aftermathDay = 2; x.environment.floodSeverity = 'none'; } },
+    { id: 'AFTERMATH_DAY3', minute: L + 60 * H, eventId: 'EV16', apply: (x) => { x.aftermathDay = 3; x.environment.powerAvailable = true; x.environment.tapWaterAvailable = true; } },
+  );
+  if (s.evacuation.arrivalAtMinute !== null) list.push({ id: 'EVAC_ARRIVAL', minute: s.evacuation.arrivalAtMinute, eventId: 'EV11', apply: (x) => {
+    x.evacuation.completed = true; x.evacuation.currentShelter = 'evacuationCenter'; x.scene = 'EVACUATION';
+  } });
+  return list.sort((a, b) => a.minute - b.minute || PRIORITY(a) - PRIORITY(b));
+}
+
+/** Tie-break for milestones at the same minute: advisory > evacuation > hazard > dilemma > reminder. */
+const PRIORITY = (m: Milestone) => (m.eventId ? ({ EV01: 0, EV06: 0, EV08: 1, EV11: 1, EV09: 2, EV10: 2, EV13: 2, EV07: 3, EV12: 3 } as Record<string, number>)[m.eventId] ?? 4 : -1);
+
+/** What the household actually has when the storm arrives (evacuees only have their go-bag). Used by scoring. */
+function recordLandfallSnapshot(s: GameState) {
+  const left = s.evacuation.departedAtMinute !== null;
+  const have = (id: 'WATER' | 'FOOD' | 'FLASHLIGHT' | 'POWER_BANK' | 'DOCUMENTS') => (left ? s.goBag[id] ?? 0 : sel.itemTotal(s, id));
+  s.counters.lf_water = have('WATER');
+  s.counters.lf_food = have('FOOD');
+  s.counters.lf_lighting = have('FLASHLIGHT') + have('POWER_BANK') > 0 ? 1 : 0;
+  s.counters.lf_powerBank = have('POWER_BANK') > 0 ? 1 : 0;
+  s.counters.lf_goBagReady = sel.goBagStatus(s) === 'ready' ? 1 : 0;
+  s.counters.lf_documentsSafe = s.flags.DOCUMENTS_PROTECTED || (s.goBag.DOCUMENTS ?? 0) > 0 ? 1 : 0;
+}
+
+function applyPeak(s: GameState) {
+  const env = s.environment;
+  env.floodSeverity = s.storm.peakFloodSeverity;
+  env.windSeverity = s.storm.peakWindSeverity;
+  if (env.floodSeverity === 'moderate' || env.floodSeverity === 'severe') env.tapWaterAvailable = false;
+  if (s.evacuation.currentShelter === 'home') {
+    const p = s.household;
+    const roofWeak = sel.roofNeedsSecuring(p) && !s.flags.ROOF_SECURED && env.windSeverity === 'severe';
+    const floodBad = env.floodSeverity === 'severe' && p.housing.floors === 1;
+    env.shelterCondition = roofWeak && floodBad ? 'unsafe' : roofWeak || floodBad ? 'compromised' : 'normal';
+  }
+}
+
+/** Authored property and supply outcomes (GS §13 as categories; no numeric thresholds). */
+function applyImpactEnd(s: GameState) {
+  const env = s.environment;
+  const p = s.household;
+  const severeWind = env.windSeverity === 'severe';
+  const boarded = s.counters.windowsBoarded ?? 0;
+  env.windowDamage = severeWind && boarded < 2 ? (boarded === 0 ? 'major' : 'minor') : 'none';
+  env.roofDamage = severeWind && sel.roofNeedsSecuring(p) && !s.flags.ROOF_SECURED ? 'minor' : 'none';
+  const wet = env.floodSeverity === 'moderate' || env.floodSeverity === 'severe';
+  const floodGuarded = s.flags.BELONGINGS_RAISED || s.flags.GATE_SANDBAGGED || p.housing.floors > 1;
+  env.suppliesLost = wet && !s.flags.SUPPLIES_STORED_SAFELY && p.housing.floors === 1;
+  if (env.suppliesLost) {
+    for (const id of ['WATER', 'FOOD'] as const) { const q = s.house[id] ?? 0; if (q > 0) s.house[id] = Math.floor(q / 2); }
+  }
+  env.documentsLost = wet && !s.flags.DOCUMENTS_PROTECTED && (s.goBag.DOCUMENTS ?? 0) === 0 && !floodGuarded;
+  const damageScore = (env.windowDamage === 'major' ? 2 : env.windowDamage === 'minor' ? 1 : 0) + (env.roofDamage !== 'none' ? 1 : 0) + (wet && !floodGuarded ? 2 : 0);
+  env.propertyDamage = damageScore >= 3 ? 'major' : damageScore >= 1 ? 'minor' : 'none';
+  env.weatherState = 'rain';
+}

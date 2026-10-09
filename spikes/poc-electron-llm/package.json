@@ -1,0 +1,55 @@
+{
+  "name": "signalno5-poc-electron-llm",
+  "version": "0.0.1",
+  "private": true,
+  "description": "THROWAWAY spike: Electron main manages llama-server; renderer shows Zod-validated scenario JSON. Not imported by src/.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "auto": "electron . --poc-auto",
+    "pack": "electron-builder --win dir"
+  },
+  "build": {
+    "appId": "ph.signalno5.poc",
+    "productName": "SignalNo5",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "llm.js",
+      "adapter.js",
+      "index.html",
+      "renderer.js",
+      "fixture.json",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "D:/signal-llm/llama-b11517-cuda124",
+        "to": "llm",
+        "filter": [
+          "llama-server.exe",
+          "*.dll"
+        ]
+      },
+      {
+        "from": "D:/signal-llm/models/Qwen3-1.7B-Q4_K_M.gguf",
+        "to": "models/Qwen3-1.7B-Q4_K_M.gguf"
+      }
+    ],
+    "win": {
+      "target": "dir"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "signal-no5",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Signal No. 5: offline 8-bit typhoon preparedness RPG (backend: simulation core, contracts, Electron main, local AI).",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dev": "node scripts/run.mjs electron-vite dev",
+    "build": "electron-vite build",
+    "pack": "npm run build && node scripts/run.mjs node scripts/pack.mjs",
+    "start": "node scripts/run.mjs electron-vite preview"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "typescript": "7.0.2",
+    "vite": "7.3.7",
+    "vitest": "5.0.3"
+  },
+  "main": "out/main/index.js"
+}
