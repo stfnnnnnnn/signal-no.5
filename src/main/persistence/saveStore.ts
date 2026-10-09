@@ -8,6 +8,7 @@ import { HouseholdProfile } from '../../shared/contracts/household';
 import { GameState } from '../../shared/contracts/state';
 import { EMPTY_PROGRESS, ProgressFile, type AchievementId, type AchievementStatus } from '../../shared/contracts/progress';
 import { evaluateRun } from '../../core/evaluation/evaluate';
+import { migrateLegacyGameState, migrateLegacyProgress } from '../../core/migrations';
 import { applyRun, computeAchievements, markPlanViewed, summarizeRun } from '../../core/evaluation/achievements';
 
 const SLOT = /^[a-z0-9][a-z0-9-]{0,31}$/;
@@ -42,7 +43,7 @@ export class SaveStore {
 
   async readGame(slot: string): Promise<GameState | null> {
     const raw = await this.readJson(this.gameFile(slot));
-    const parsed = GameState.safeParse(raw);
+    const parsed = GameState.safeParse(migrateLegacyGameState(raw));
     return parsed.success ? parsed.data : null;
   }
 
@@ -72,7 +73,7 @@ export class SaveStore {
   }
   // ---------- cross-run progress (achievements) ----------
   async readProgress(): Promise<ProgressFile> {
-    const parsed = ProgressFile.safeParse(await this.readJson(path.join(this.root, 'progress.json')));
+    const parsed = ProgressFile.safeParse(migrateLegacyProgress(await this.readJson(path.join(this.root, 'progress.json'))));
     return parsed.success ? parsed.data : structuredClone(EMPTY_PROGRESS);
   }
 
@@ -81,7 +82,7 @@ export class SaveStore {
    * cannot claim results. Idempotent per runId; abandoned runs are rejected. Earned badges are merged too.
    */
   async recordCompletedRun(raw: unknown, now = new Date().toISOString()): Promise<{ achievements: AchievementStatus[]; newlyUnlocked: AchievementId[] }> {
-    const state = GameState.parse(raw);
+    const state = GameState.parse(migrateLegacyGameState(raw));
     const ev = evaluateRun(state);
     const summary = summarizeRun(state, ev, now); // throws for an incomplete run
     const r = applyRun(await this.readProgress(), summary, now);

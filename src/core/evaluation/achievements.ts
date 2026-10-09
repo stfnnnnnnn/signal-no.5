@@ -4,6 +4,7 @@ import type { DebriefEvaluation } from '../../shared/contracts/debrief';
 import { ACHIEVEMENT_IDS, type AchievementId, type AchievementStatus, type ProgressFile, type RunSummary } from '../../shared/contracts/progress';
 import type { GameState } from '../../shared/contracts/state';
 import { ACHIEVEMENT_CATALOG } from '../content/achievements';
+import { evaluateCommunityAssistance } from './community';
 import { OBJECTIVES } from './objectives';
 
 /** Lesson cards = one per objective finding (the late-purchase lesson needs a mistake, so it is not required). */
@@ -16,7 +17,10 @@ export function summarizeRun(s: GameState, ev: DebriefEvaluation, completedAt: s
     runId: s.runId, stormSeed: s.storm.stormSeed, configMode: s.household.configMode, exposure: s.storm.exposure, budgetTier: s.household.budgetTier,
     completedAt, score: ev.score, handaEarned: ev.handa.earned, wellbeingPercent: ev.handa.wellbeingPercent, badgeIds: ev.badgeIds,
     lessonIds: ev.lessonIds.filter((id) => LESSON_IDS.includes(id)),
-    rumorOpportunity: s.eventHistory.some((h) => h.eventId === 'EV07'), rumorForwarded: s.flags.RUMOR_FORWARDED === true, nenaHelped: s.flags.NENA_HELPED === true,
+    rumorOpportunity: s.eventHistory.some((h) => h.eventId === 'EV07'), rumorForwarded: s.flags.RUMOR_FORWARDED === true,
+    // A08 consumes the authoritative B06 result; the action ID comes from the same community evaluation.
+    communityHelpCompleted: ev.badges.some((b) => b.id === 'B06' && b.status === 'earned'),
+    communityHelpActionId: evaluateCommunityAssistance(s).actionId,
   };
 }
 
@@ -34,7 +38,7 @@ function progressOf(p: ProgressFile): Record<AchievementId, [number, number]> {
     A05: [Math.min(1, count((r) => r.handaEarned && r.budgetTier === 'limited')), 1],
     A06: [new Set(runs.map((r) => r.stormSeed)).size, 5],
     A07: [count((r) => r.rumorOpportunity && !r.rumorForwarded), 5],
-    A08: [count((r) => r.nenaHelped), 5],
+    A08: [count((r) => r.communityHelpCompleted), 5],
     A09: [Math.min(1, count((r) => r.configMode === 'custom')), 1],
     A10: [Math.min(1, p.plansViewed.filter((id) => recorded.has(id)).length), 1],
   };

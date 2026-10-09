@@ -4,7 +4,7 @@ import type { ShopItemId } from '../src/shared/contracts/state';
 import { playToEnd, resolveFirst } from './helpers';
 
 export const SAFE_CHOICES = ['CHECK_ADVISORY', 'READ_UPDATE', 'VERIFY_RUMOR', 'FOLLOW_EVACUATION', 'ARRANGE_ASSISTANCE', 'SEEK_ASSISTANCE', 'PACK_MEDICATION',
-  'ARRANGE_CONTINUITY', 'HELP_WITH_NEED', 'HELP_NENA_PREPARE', 'USE_FLASHLIGHT', 'MOVE_TO_SAFER_ROOM', 'ACCOUNT_MEMBERS', 'INSPECT_SUPPLIES', 'INSPECT_GO_BAG',
+  'ARRANGE_CONTINUITY', 'HELP_WITH_NEED', 'HELP_COMMUNITY_PREPARATION', 'SHARE_VERIFIED_ADVISORY', 'USE_FLASHLIGHT', 'MOVE_TO_SAFER_ROOM', 'ACCOUNT_MEMBERS', 'INSPECT_SUPPLIES', 'INSPECT_GO_BAG',
   'REVIEW_RESOURCES', 'VERIFY_GUIDANCE', 'FAMILY_MEETING', 'CHECK_HOUSEHOLD_NEEDS', 'REVIEW_ADVISORY', 'FINISH_REFLECTION'];
 
 function act(e: GameEngine, id: string) {
@@ -12,7 +12,9 @@ function act(e: GameEngine, id: string) {
   return e.executeAction(id).ok;
 }
 
-export function prepareDiligently(e: GameEngine) {
+/** opts.community=false skips the optional Bayanihan actions (to prove declining them never costs Handa). */
+export function prepareDiligently(e: GameEngine, opts: { community?: boolean } = {}) {
+  const skip = opts.community === false ? new Set(['SHARE_VERIFIED_ADVISORY', 'HELP_COMMUNITY_PREPARATION']) : new Set<string>();
   if (e.getState().activeEvent?.eventId === 'EV01') e.resolveEvent('CHECK_ADVISORY');
   for (const id of ['PREPARE_COMMUNICATION', 'FAMILY_MEETING', 'ARRANGE_ASSISTANCE', 'CHECK_ESSENTIAL_SUPPLIES']) act(e, id);
   if (act(e, 'SHOP_TRIP')) {
@@ -31,11 +33,12 @@ export function prepareDiligently(e: GameEngine) {
     act(e, 'RETURN_HOME');
   }
   for (const id of ['PACK_GO_BAG', 'PACK_MEDICATION', 'PREPARE_PET_SUPPLIES', 'PREPARE_CHILD_SUPPLIES', 'FILL_CONTAINERS', 'FILL_CONTAINERS', 'FILL_DRUM',
-    'PROTECT_DOCUMENTS', 'BARANGAY_VISIT', 'CHARGE_PHONE', 'CHARGE_POWER_BANK', 'TALK_TO_NENA', 'HELP_NENA_PREPARE', 'GET_TOOLS',
-    'BOARD_WINDOW', 'BOARD_WINDOW', 'BOARD_WINDOW', 'BOARD_WINDOW', 'SECURE_ROOF', 'SECURE_OBJECTS']) act(e, id);
+    'PROTECT_DOCUMENTS', 'BARANGAY_VISIT', 'CHARGE_PHONE', 'CHARGE_POWER_BANK', 'SHARE_VERIFIED_ADVISORY', 'HELP_COMMUNITY_PREPARATION', 'GET_TOOLS',
+    'BOARD_WINDOW', 'BOARD_WINDOW', 'BOARD_WINDOW', 'BOARD_WINDOW', 'SECURE_ROOF', 'SECURE_OBJECTS']) if (!skip.has(id)) act(e, id);
 }
 
-export function playDiligently(e: GameEngine) {
-  prepareDiligently(e);
-  return playToEnd(e, SAFE_CHOICES);
+export function playDiligently(e: GameEngine, opts: { community?: boolean } = {}) {
+  prepareDiligently(e, opts);
+  const prefer = opts.community === false ? SAFE_CHOICES.filter((id) => id !== 'SHARE_VERIFIED_ADVISORY' && id !== 'HELP_COMMUNITY_PREPARATION') : SAFE_CHOICES;
+  return playToEnd(e, prefer);
 }

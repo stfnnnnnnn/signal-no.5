@@ -50,3 +50,7 @@ export const isOutdoorSafe = (s: GameState) =>
   (s.phase === 'preparation' || s.phase === 'warning') && s.environment.weatherState !== 'heavyRain' && s.environment.weatherState !== 'typhoon';
 export const minutesToLandfall = (s: GameState) => s.landfallMinute - s.clock.gameMinutes;
 export const inPreLandfall = (s: GameState) => s.clock.gameMinutes < s.landfallMinute;
+/** Evacuation advisory minute (scheduled), or null when this storm has no advisory. */
+export const advisoryMinute = (s: GameState) => (s.storm.evacuationAdvisoryEvent ? s.landfallMinute - (8 + (s.storm.advisoryLeadHours ?? 0)) * HOUR : null);
+/** Heavy rain begins: outdoor work stops being safe. */
+export const heavyRainMinute = (s: GameState) => s.landfallMinute - 8 * HOUR;

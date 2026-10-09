@@ -22,18 +22,21 @@ export const RunSummary = z.object({
   lessonIds: z.array(z.string()),
   rumorOpportunity: z.boolean(),
   rumorForwarded: z.boolean(),
-  nenaHelped: z.boolean(),
+  /** From the authoritative B06 result (a qualifying community-assistance action was completed). */
+  communityHelpCompleted: z.boolean(),
+  communityHelpActionId: z.string().nullable(),
 });
 export type RunSummary = z.infer<typeof RunSummary>;
 
 export const ProgressFile = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   runs: z.array(RunSummary),
   plansViewed: z.array(z.string()),
   unlocked: z.partialRecord(AchievementId, z.string()),
 });
 export type ProgressFile = z.infer<typeof ProgressFile>;
-export const EMPTY_PROGRESS: ProgressFile = { schemaVersion: 1, runs: [], plansViewed: [], unlocked: {} };
+export const EMPTY_PROGRESS: ProgressFile = { schemaVersion: 2, runs: [], plansViewed: [], unlocked: {} };
+
 
 export const AchievementStatus = z.object({
   id: AchievementId, name: z.string(), description: z.string(), iconAssetId: z.string(),

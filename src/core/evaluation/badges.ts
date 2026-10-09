@@ -4,6 +4,7 @@ import type { BadgeId } from '../../shared/contracts/ids';
 import type { BadgeResult } from '../../shared/contracts/debrief';
 import type { GameState } from '../../shared/contracts/state';
 import * as sel from '../selectors';
+import { evaluateCommunityAssistance } from './community';
 
 type Check = { applicable: boolean; earned: boolean; reasons: string[] };
 const f = (s: GameState, k: keyof GameState['flags']) => s.flags[k] === true;
@@ -18,7 +19,8 @@ function check(applicable: boolean, conds: [boolean, string][]): Check {
 }
 
 export const requiredWindows = (s: GameState) => (s.household.housing.floors === 1 ? 2 : s.household.housing.floors === 2 ? 3 : 4);
-const advisoryMinute = (s: GameState) => s.landfallMinute - (8 + (s.storm.advisoryLeadHours ?? 0)) * H;
+/** Badges that cannot be lost once their condition is met, so they are earned mid-run (B06: a completed, logged action). */
+const LOCKS_IN: ReadonlySet<BadgeId> = new Set(['B06']);
 const routeClosesAt = (s: GameState) => (s.storm.roadClosureEvent ? s.landfallMinute - 2 * H : s.landfallMinute);
 
 /** B08 rules: also referenced by Handa's evacuation/household-assistance requirement. */
@@ -36,7 +38,7 @@ export function evaluateHouseholdSafety(s: GameState): BadgeResult {
 
 function toResult(id: BadgeId, s: GameState, r: Check): BadgeResult {
   if (!r.applicable) return { id, status: 'notApplicable', reasons: r.reasons };
-  if (!s.completed) return { id, status: 'eligible', reasons: [] };
+  if (!s.completed) return LOCKS_IN.has(id) && r.earned ? { id, status: 'earned', reasons: [] } : { id, status: 'eligible', reasons: [] };
   return { id, status: r.earned ? 'earned' : 'notEarned', reasons: r.reasons };
 }
 
@@ -51,11 +53,10 @@ const RULES: Record<Exclude<BadgeId, 'B01' | 'B08'>, (s: GameState) => Check> = 
     ]);
   },
   B05: (s) => check(!s.completed || happened(s, 'EV07'), [[f(s, 'RUMOR_VERIFIED'), 'The rumour was not verified with an official source.'], [!f(s, 'RUMOR_FORWARDED'), 'An unverified rumour was shared.']]),
-  B06: (s) => check(true, [
-    [f(s, 'NENA_HELPED'), 'Aling Nena was not helped to get ready.'],
-    [f(s, 'NENA_HELPED') && c(s, 'nenaHelpedAt') <= (s.storm.evacuationAdvisoryEvent ? advisoryMinute(s) : s.landfallMinute - 8 * H), 'Help came too late.'],
-    [!f(s, 'UNSAFE_ACTION_ATTEMPTED'), 'An unsafe action was taken.'],
-  ]),
+  B06: (s) => {
+    const ca = evaluateCommunityAssistance(s);
+    return check(ca.opportunity, [[ca.qualifying !== null, 'No community-assistance action was completed while it was still safe (optional; never affects Handa or the score).']]);
+  },
   B07: (s) => check(!s.completed || s.environment.evacuationAdvisoryIssued, [
     [s.evacuation.completed, 'The household did not reach the evacuation destination.'],
     [s.evacuation.departedAtMinute !== null && s.evacuation.departedAtMinute <= routeClosesAt(s), 'The household left after the route became unsafe.'],

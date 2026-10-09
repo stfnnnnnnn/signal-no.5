@@ -16,7 +16,7 @@ import { playToEnd } from './helpers';
 const T = (n: number) => new Date(Date.UTC(2026, 9, 10, 0, n)).toISOString();
 const run = (over: Partial<RunSummary> = {}, i = 0): RunSummary => ({
   runId: `r${i}`, stormSeed: i, configMode: 'random', exposure: 'standard', budgetTier: 'moderate', completedAt: T(i), score: 50,
-  handaEarned: false, wellbeingPercent: 100, badgeIds: [], lessonIds: [], rumorOpportunity: false, rumorForwarded: false, nenaHelped: false, ...over,
+  handaEarned: false, wellbeingPercent: 100, badgeIds: [], lessonIds: [], rumorOpportunity: false, rumorForwarded: false, communityHelpCompleted: false, communityHelpActionId: null, ...over,
 });
 const status = (p: ProgressFile, id: string) => computeAchievements(p).find((a) => a.id === id)!;
 const addAll = (runs: RunSummary[]) => runs.reduce((p, r, i) => applyRun(p, r, T(100 + i)).progress, EMPTY_PROGRESS);
@@ -71,9 +71,9 @@ describe('achievement rules', () => {
     expect(status(addAll([...runs, run({ rumorOpportunity: true }, 6)]), 'A07').unlocked).toBe(true);
   });
 
-  it('A08 Whole Barangay needs Aling Nena helped in five distinct runs', () => {
-    expect(status(addAll([0, 1, 2, 3, 4].map((i) => run({ nenaHelped: true }, i))), 'A08').unlocked).toBe(true);
-    expect(status(addAll([0, 1, 2, 3].map((i) => run({ nenaHelped: true }, i))), 'A08').unlocked).toBe(false);
+  it('A08 Whole Barangay needs community assistance in five distinct completed runs', () => {
+    expect(status(addAll([0, 1, 2, 3, 4].map((i) => run({ communityHelpCompleted: true, communityHelpActionId: 'SHARE_VERIFIED_ADVISORY' }, i))), 'A08').unlocked).toBe(true);
+    expect(status(addAll([0, 1, 2, 3].map((i) => run({ communityHelpCompleted: true, communityHelpActionId: 'SHARE_VERIFIED_ADVISORY' }, i))), 'A08').unlocked).toBe(false);
   });
 
   it('A09 My Real Home needs a completed custom-mode run', () => {

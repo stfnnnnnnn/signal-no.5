@@ -26,7 +26,6 @@ export const INTERACTABLES: InteractableDef[] = [
   { id: 'BEDROOM_MEDICATION', scene: 'HOUSE', area: 'bedroom', label: 'Medicine cabinet',
     // Also present when the answer was unknown/undisclosed: never assume medication is unnecessary.
     present: (p) => p.medical.essentialMedication !== 'no' || sel.hasMedicalEquipment(p) },
-  { id: 'NPC_ALING_NENA', scene: 'HOUSE', area: 'entrance', label: 'Aling Nena (neighbour)' },
   { id: 'UTILITY_TOOLS', scene: 'HOUSE', area: 'utility', label: 'Toolbox' },
   { id: 'UTILITY_SHELF', scene: 'HOUSE', area: 'utility', label: 'Supply shelf' },
   { id: 'UTILITY_DRUM', scene: 'HOUSE', area: 'utility', label: 'Water drum' },

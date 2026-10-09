@@ -16,12 +16,15 @@ import { createInitialState } from './init/initialState';
 import { deriveSeed } from './rng';
 import { checkShelterResolution } from './wellbeing';
 import { evaluateRun } from './evaluation/evaluate';
+import { evaluateCommunityAssistance } from './evaluation/community';
+import { COMMUNITY_ACTION_IDS } from './content/community';
 import { BADGE_CATALOG, type BadgeMeta } from './content/badges';
 import { ACHIEVEMENT_CATALOG, type AchievementMeta } from './content/achievements';
 import type { DebriefEvaluation } from '../shared/contracts/debrief';
 import { buildSceneDirective } from './scene/directive';
 import type { SceneDirective } from '../shared/contracts/scene';
 import * as sel from './selectors';
+import { migrateLegacyGameState } from './migrations';
 
 // ---------- public types ----------
 export type ErrorCode =
@@ -39,6 +42,8 @@ export type EngineEvent =
   | { type: 'sceneChanged'; from: GameState['scene']; to: GameState['scene'] }
   | { type: 'speedChanged'; timeScale: TimeScale; reason: 'player' | 'critical' }
   | { type: 'purchaseCompleted'; shopItemId: ShopItemId; quantity: number; total: number }
+  /** A badge whose condition can't be lost was met mid-run (currently only B06 Bayanihan). Emitted once. */
+  | { type: 'badgeEarned'; badgeId: 'B06' }
   | { type: 'runCompleted' };
 
 export type CommandResult = { ok: true; state: GameState; events: EngineEvent[]; decision?: DecisionRecord } | { ok: false; error: EngineError };
@@ -64,7 +69,7 @@ function snapshot(s: GameState): StateSnapshot {
 }
 
 const usesKey = (id: string) => `uses:${id}`;
-/** Household NPC IDs map to the shared 'NPC' interactable; Aling Nena is her own interactable. */
+/** Household NPC IDs (NPC_M<n>) map to the shared 'NPC' interactable. */
 const npcKey = (id: string | undefined) => (id && id.startsWith('NPC_') && !INTERACTABLE_BY_ID.has(id) ? 'NPC' : id);
 
 export function evaluateAction(def: ActionDef, c: Ctx): { applicable: boolean; reasons: string[] } {
@@ -280,6 +285,9 @@ export class GameEngine {
     };
     draft.decisionLog.push(decision);
     events.push({ type: 'actionCompleted', actionId: def.id, decisionSeq: decision.seq });
+    if (COMMUNITY_ACTION_IDS.has(def.id) && evaluateCommunityAssistance(this.state).qualifying === null && evaluateCommunityAssistance(draft).qualifying !== null) {
+      events.push({ type: 'badgeEarned', badgeId: 'B06' });
+    }
     if (ev) {
       if (ev.eventId === 'EV10') checkShelterResolution(draft, ev.variantId, def.id, ev.actionIds);
       const h = [...draft.eventHistory].reverse().find((x) => x.eventId === ev.eventId && x.resolvedWith === null);
@@ -387,7 +395,7 @@ export function startRun(profile: HouseholdProfile, opts: CreateOptions): { ok: 
 }
 
 export function loadGame(raw: unknown): { ok: true; engine: GameEngine } | { ok: false; error: EngineError } {
-  const parsed = GameState.safeParse(raw);
+  const parsed = GameState.safeParse(migrateLegacyGameState(raw));
   if (!parsed.success) return fail('INVALID_SAVE', 'The save data is not valid.', { issues: parsed.error.issues.map((i) => ({ path: i.path.map(String), message: i.message })) });
   return { ok: true, engine: new GameEngine(parsed.data) };
 }

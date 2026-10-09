@@ -35,7 +35,7 @@ describe('blueprint §6 examples', () => {
     expect(r.events.some((e) => e.type === 'eventTriggered' && e.eventId === 'EV01')).toBe(true);
 
     const world = engine.getWorldConfig();
-    expect(world.interactables.map((i) => i.id)).toContain('NPC_ALING_NENA');
+    expect(world.interactables.map((i) => i.id)).toContain('LIVING_PHONE'); // community assistance: SHARE_VERIFIED_ADVISORY
     expect(world.interactables.map((i) => i.id)).toContain('BEDROOM_MEDICATION'); // medical answer "not sure"
 
     const bad = createGame({ ...answers, q2ExactSize: 7 }, { seed: 1 });

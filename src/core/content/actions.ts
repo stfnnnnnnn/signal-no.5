@@ -5,6 +5,7 @@ import type { FlagId, ItemId } from '../../shared/contracts/ids';
 import type { HouseholdProfile } from '../../shared/contracts/household';
 import type { GameState } from '../../shared/contracts/state';
 import * as sel from '../selectors';
+import { communityDeadline } from './community';
 import { PACKABLE_ITEMS } from './items';
 
 export interface Ctx { s: GameState; p: HouseholdProfile }
@@ -54,6 +55,8 @@ const atScene = (scene: GameState['scene']): Requirement => ({ test: ({ s }) => 
 const preLandfall: Requirement = { test: ({ s }) => sel.inPreLandfall(s), reason: 'Not possible after landfall.' };
 const tap: Requirement = { test: ({ s }) => s.environment.tapWaterAvailable, reason: 'Tap water is not available.' };
 const power: Requirement = { test: ({ s }) => s.environment.powerAvailable, reason: 'There is no electricity.' };
+/** The action (of the given fixed cost) must be finished by the deadline, not merely started before it. */
+const finishBy = (deadline: (s: GameState) => number, minutes: number, reason: string): Requirement => ({ test: ({ s }) => s.clock.gameMinutes + minutes <= deadline(s), reason });
 
 function checkInformation({ s }: Ctx) {
   set(s, 'BULLETIN_CHECKED');
@@ -162,11 +165,18 @@ export const ACTIONS: ActionDef[] = [
   { id: 'CHARGE_POWER_BANK', label: 'Charge the power bank', scope: 'world', interactables: ['LIVING_PHONE'], timeCostMinutes: 60,
     requires: [power, needItem('POWER_BANK', 'You have no power bank (available at the shop).'), not('POWER_BANK_CHARGED', 'The power bank is already charged.')],
     effect: ({ s }) => set(s, 'POWER_BANK_CHARGED') },
-  { id: 'TALK_TO_NENA', label: 'Check on Aling Nena', scope: 'world', interactables: ['NPC_ALING_NENA'], timeCostMinutes: 5, kind: 'conversation',
-    requires: [atScene('HOUSE')], effect: ({ s }) => set(s, 'NENA_MET') },
-  { id: 'HELP_NENA_PREPARE', label: 'Help Aling Nena pack and register for official assistance', scope: 'both', interactables: ['NPC_ALING_NENA'], timeCostMinutes: 45, maxUses: 1,
-    requires: [atScene('HOUSE'), outdoorSafe, preLandfall, { test: ({ s }) => !s.environment.evacuationAdvisoryIssued, reason: 'Follow the evacuation advisory now; officials are assisting neighbours.' }],
-    effect: ({ s }) => { set(s, 'NENA_MET', 'NENA_HELPED'); s.counters.nenaHelpedAt = s.clock.gameMinutes; }, safetyRuleId: 'SR_HELP_NEIGHBOURS_SAFELY' },
+  // ---- Community assistance (B06 Bayanihan; allowlist in community.ts) ----------------------------
+  { id: 'SHARE_VERIFIED_ADVISORY', label: 'Share the verified official advisory with neighbours', scope: 'both', interactables: ['LIVING_PHONE'], timeCostMinutes: 15, maxUses: 1,
+    requires: [{ test: ({ s }) => flag(s, 'BULLETIN_CHECKED'), reason: 'Check official information first; only verified information should be shared.' },
+      { test: ({ s }) => s.environment.powerAvailable || s.phoneBattery >= 10, reason: 'The phone battery is too low.' },
+      finishBy(communityDeadline('SHARE_VERIFIED_ADVISORY'), 15, 'It is too late to send updates now; keep the phone for your household.')],
+    effect: ({ s }) => { set(s, 'VERIFIED_INFO_SHARED'); if (!s.environment.powerAvailable) s.phoneBattery = Math.max(0, s.phoneBattery - 5); },
+    safetyRuleId: 'SR_SHARE_VERIFIED_INFORMATION' },
+  { id: 'HELP_COMMUNITY_PREPARATION', label: 'Help neighbours with the community preparedness activity', scope: 'both', interactables: ['ENTRANCE_DOOR'], timeCostMinutes: 60, maxUses: 1,
+    requires: [atScene('HOUSE'), outdoorSafe, { test: ({ s }) => !s.environment.evacuationAdvisoryIssued, reason: 'Follow the evacuation advisory now; community activities have stopped.' },
+      { test: ({ s }) => s.environment.roadStatus !== 'closed', reason: 'The road is closed.' },
+      finishBy(communityDeadline('HELP_COMMUNITY_PREPARATION'), 60, 'Not enough time to finish safely before conditions worsen.')],
+    effect: ({ s }) => set(s, 'COMMUNITY_PREP_HELPED'), safetyRuleId: 'SR_HELP_COMMUNITY_SAFELY' },
   { id: 'FOLLOW_EVACUATION', label: 'Leave for the evacuation destination', scope: 'both', interactables: ['ENTRANCE_DOOR'], timeCostMinutes: 0,
     requires: evacuationOpen, effect: ({ s, p }) => {
       s.evacuation.decision = 'comply';

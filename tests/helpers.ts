@@ -31,3 +31,14 @@ export function playToEnd(e: GameEngine, prefer: string[] = [], maxSteps = 5000)
 }
 
 export const minutes = (e: GameEngine) => e.getState().clock.gameMinutes;
+
+/** Advance at 1× to an exact game minute, resolving any events with the preferred (non-departing) choices. */
+export function advanceTo(e: GameEngine, minute: number, prefer: string[] = ['CHECK_ADVISORY', 'REVIEW_ADVISORY', 'READ_UPDATE', 'VERIFY_RUMOR', 'CHECK_HOUSEHOLD_NEEDS', 'DEFER']) {
+  if (e.getState().clock.timeScale !== 1) e.setSpeed(1);
+  for (let i = 0; i < 10_000 && e.getState().clock.gameMinutes < minute; i++) {
+    if (e.getState().activeEvent) { resolveFirst(e, prefer); continue; }
+    e.tick(Math.min(60_000, (minute - e.getState().clock.gameMinutes) * 4_000));
+  }
+  while (e.getState().activeEvent) resolveFirst(e, prefer);
+  return e.getState();
+}
