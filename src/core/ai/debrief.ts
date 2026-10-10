@@ -6,6 +6,7 @@ import type { GameState } from '../../shared/contracts/state';
 import { BADGE_META } from '../content/badges';
 import { FINDING_BY_ID } from '../content/findings';
 import { checkNarration, describeHome, type HomeFacts } from './guard';
+import { checkDebriefConsistency } from './debriefGuard';
 
 const ENDING_LABEL = { handa: 'Handa', nakaraos: 'Nakaraos', nahirapan: 'Nahirapan' } as const;
 
@@ -41,7 +42,7 @@ export function validateDebriefNarration(ev: DebriefEvaluation, raw: string, hom
   if (!parsed.success) return { ok: false, reason: 'schema' };
   const known = new Set([...ev.strengths, ...ev.gaps]);
   if (parsed.data.highlightFindingIds.some((id) => !known.has(id))) return { ok: false, reason: 'unknown-finding' };
-  const why = checkNarration(parsed.data.summary, home);
+  const why = checkNarration(parsed.data.summary, home) ?? checkDebriefConsistency(parsed.data.summary, ev);
   if (why) return { ok: false, reason: `ungrounded:${why}` };
   return { ok: true, narration: parsed.data };
 }

@@ -28,6 +28,7 @@ const DEBRIEF_SYSTEM = [
   'You summarise a finished run of an educational typhoon-preparedness game for the player, warmly and briefly.',
   'Use only the strengths and gaps given; do not add advice, numbers, places, phone numbers, websites or medical instructions.',
   'If you mention the home, use only home.description (or simply "home").',
+  'Describe only the given strengths as things the player did; mention gaps only as things to do next time. If you state the score or ending, use exactly the given values.',
   'Reply with JSON only: {"summary": at most 300 characters, "highlightFindingIds": up to 3 ids taken from the given strengths or gaps}.',
 ].join('\n');
 

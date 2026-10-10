@@ -173,6 +173,6 @@ describe('no false positives on ordinary narration (review finding)', () => {
     const e = game(); playToEnd(e);
     const ev = evaluateRun(e.getState());
     const req = buildDebriefRequest(ev, e.getState());
-    expect(validateDebriefNarration(ev, JSON.stringify({ summary: 'Because you left early, nobody was trapped by the flood.', highlightFindingIds: [] }), req.home).ok).toBe(true);
+    expect(validateDebriefNarration(ev, JSON.stringify({ summary: 'Because everyone moved to the safest room, nobody was trapped by the flood.', highlightFindingIds: [] }), req.home).ok).toBe(true);
   });
 });
