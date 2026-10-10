@@ -4,9 +4,7 @@ import { listSaves, removeSave } from '../../services/persistence';
 import { continueSaved } from '../../services/continueGame';
 import { useApp } from '../../state/hooks';
 import { ui } from '../../state/uiStore';
-
-/** The storm-signal "5" drawn as a pixel grid (5 columns x 7 rows). */
-const FIVE = ['#####', '#....', '####.', '....#', '....#', '#...#', '.###.'];
+import logo from '../../assets/ui/logo.png';
 
 export function Title() {
   const app = useApp();
@@ -27,13 +25,8 @@ export function Title() {
     <main className="title-screen">
       <div className="rain" aria-hidden="true" />
       <div className="title-block">
-        <div className="signal-five" aria-hidden="true">
-          {FIVE.map((row, y) => row.split('').map((c, x) => <i key={`${x}-${y}`} className={c === '#' ? 'on' : ''} />))}
-        </div>
-        <div>
-          <h1>Signal No. 5</h1>
-          <p className="tagline">A typhoon is coming. Get your household ready.</p>
-        </div>
+        <h1><img className="title-logo" src={logo} alt="Signal No. 5" width={960} height={455} /></h1>
+        <p className="tagline">A typhoon is coming. Get your household ready.</p>
       </div>
       <nav className="title-menu" aria-label="Main menu">
         <button onClick={() => app.go('mode')} autoFocus>New game</button>

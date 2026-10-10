@@ -17,6 +17,12 @@ describe('M5 screens render from real data', () => {
     expect(h).toContain('New game');
     expect(h).not.toContain('Continue');
   });
+  it('title: the logo artwork is the heading, named for screen readers', () => {
+    const h = html(Title);
+    expect(h).toMatch(/<h1[^>]*><img[^>]*class="title-logo"[^>]*>/);
+    expect(h).toMatch(/<img[^>]*alt="Signal No\. 5"/);
+    expect(h).not.toContain('signal-five');
+  });
   it('Q0 shows the exact backend labels and details', () => {
     const h = html(ModeSelect);
     expect(h).toContain('Customize My Household');
