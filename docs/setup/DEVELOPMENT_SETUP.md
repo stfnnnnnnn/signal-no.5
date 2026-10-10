@@ -15,16 +15,20 @@ Install Node 24 LTS from nodejs.org (installer), or use the official `node-v24.x
 ## 2. Install
 
 ```powershell
-git clone <repository-url> "signal no.5"
+git clone https://github.com/stfnnnnnnn/signal-no.5 "signal no.5"
 cd "signal no.5"
 npm install
 ```
 
-If `node_modules\electron\dist\electron.exe` is missing after install (npm 11 blocks Electron's post-install download), run:
+With npm 11, `node_modules\electron\dist\electron.exe` will be missing after install (npm 11 blocks Electron's post-install download; the "install scripts … not yet covered by allowScripts" warning is that). Run:
 
 ```powershell
 node node_modules/electron/install.js
 ```
+
+Verified on a fresh clone (2026-10-10, Node 24.20, npm 11): `npm install` → `install.js` → `npm test` 517 passed → `npm run typecheck` clean → `npm run build` → the app opens to the title screen, with "Local AI offline" when no model is configured.
+
+To play: `npm start` builds and opens the game. Clone outside OneDrive or other synced folders if you can: `node_modules` and `out` are large.
 
 ## 3. Commands (from `package.json`)
 
@@ -36,10 +40,11 @@ node node_modules/electron/install.js
 | Type check | `npm run typecheck` |
 | Dev app (hot reload; renderer at `http://localhost:5173`) | `npm run dev` |
 | Production build to `out/` | `npm run build` |
-| Run the built app | `npm run start` |
+| Build and play the game | `npm start` |
+| Re-process art from `assets/` into `src/renderer/assets/` | `npm run assets` (only when the source art changes; the processed files are committed) |
 | Package the Windows folder | `npm run pack` (see [WINDOWS_PACKAGING.md](WINDOWS_PACKAGING.md)) |
 
-Expected results: `npm test` → **329 passed**; `npm run typecheck` → no output, exit code 0.
+Expected results: `npm test` → **517 passed** (59 files); `npm run typecheck` → no output, exit code 0.
 
 ## 4. Environment variables (all optional)
 
@@ -82,7 +87,8 @@ The engine itself (`src/core`) has no Electron dependency, so you can also drive
 | `npm install` warns "install scripts … not yet covered by allowScripts" | Expected with npm 11. Electron's binary may be missing; run `node node_modules/electron/install.js`. The esbuild warning is harmless (the build works) |
 | `electron` exits immediately or prints a Node stack trace / "Node.js v24…" | `ELECTRON_RUN_AS_NODE=1` is set (VS Code terminals do this). Use the npm scripts (they clear it via `scripts/run.mjs`), or `$env:ELECTRON_RUN_AS_NODE = $null` in PowerShell |
 | `EBADENGINE` / Electron install fails | Node is older than 22.12. Upgrade to Node 24 LTS |
-| `npm run dev` window shows AI `unavailable` | Expected without a model. See [LOCAL_AI_SETUP.md](LOCAL_AI_SETUP.md) |
+| Title screen shows "Local AI offline" | Expected without a model. See [LOCAL_AI_SETUP.md](LOCAL_AI_SETUP.md) |
+| The packaged `SignalNo5.exe` is blocked by Windows ("Application Control policy") | Smart App Control; run from source with `npm start`. See [WINDOWS_PACKAGING.md §6](WINDOWS_PACKAGING.md#6-running-on-another-pc) |
 | Port 5173 busy | Another Vite dev server is running. Close it |
 | "Second instance" closes immediately | The app holds a single-instance lock. Close the running copy |
 | Rollup warns "contains an annotation that Rollup cannot interpret" (zod) | Harmless build notice |

@@ -82,17 +82,21 @@ When two documents disagree:
 | `tests/helpers.ts`, `tests/fixtures/onboarding.ts`, `tests/diligent.ts` | `newGame`, `playToEnd`, `resolveFirst`; `customFamily()`, `customSolo()`, `randomHousehold()`; `playDiligently` (a Handa-quality run) |
 | `tests/docs-examples.test.ts`, `tests/docs-sync.test.ts` | Executable blueprint §6 examples (incl. 6.5 Bayanihan); frontend docs stay free of the removed NPC |
 | `tests/community.test.ts`, `tests/evacuation-timing.test.ts` | B06/A08 community assistance, migrations, removal; evacuation travel and location consistency |
+| `tests/debriefGrounding.test.ts`, `tests/scenarioGrounding.test.ts` | AI narration can't contradict the scenario or the run's evaluation; contradictions fall back to reviewed text |
+| `tests/renderer/*.test.ts` | Frontend logic without a browser: layout and collision, onboarding model, HUD, stores, autosave, persistence, weather visuals |
+| `tests/renderer-ui/*.test.ts` | React screens rendered on the server (title, onboarding, achievements, debrief, keyboard handling) |
 
-Run with `npm test` (329 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no UI or E2E tests yet (Playwright is not installed).
+Run with `npm test` (517 tests) and `npm run typecheck`. The packaged app has a `--self-test` mode ([WINDOWS_PACKAGING.md §4](setup/WINDOWS_PACKAGING.md#4-packaged-self-test)). There are no browser-driven E2E tests (Playwright is not installed); full runs are checked manually in the real app.
 
 ## 11. Packaging
 | Document | Description | Audience | Type |
 |---|---|---|---|
-| [setup/WINDOWS_PACKAGING.md](setup/WINDOWS_PACKAGING.md) | `npm run pack`, the portable folder layout, first launch, self-test, the pending offline test | Backend, demo owner | Guide |
+| [setup/WINDOWS_PACKAGING.md](setup/WINDOWS_PACKAGING.md) | `npm run pack`, the portable folder layout, first launch, self-test, running on another PC (GPU, Smart App Control), the pending offline test | Backend, demo owner | Guide |
 
 ## 12. Known limitations
 These are summarised in [../README.md#known-limitations](../README.md#known-limitations) and tracked in [implementation/IMPLEMENTATION_PLAN.md](implementation/IMPLEMENTATION_PLAN.md):
-- the frontend isn't built;
+- the `.exe` is unsigned, so Smart App Control can block it on some PCs;
+- local AI needs an NVIDIA GPU (otherwise reviewed fallback text);
 - the airplane-mode test is pending;
 - the model choice is provisional;
 - educational content needs review;

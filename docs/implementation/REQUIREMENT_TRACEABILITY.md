@@ -33,7 +33,7 @@ Status: ✅ implemented + tested · 🟡 partial · ⏳ deferred · ⛔ deprecat
 | Directive 2026-10-09 | Badges B01–B12, Handa ≥ 85% (boundary, attainability for all profiles) | `evaluation/badges.ts`, `evaluation/handa.ts` | ✅ | `badges.test` (mutation-checked) |
 | Directive 2026-10-09 | Achievements A01–A10 + persistence | `evaluation/achievements.ts`, `SaveStore` | ✅ | `achievements.test`, `integration.test` |
 | GD §17 | Persistence (saves, badges, profile; replay resets run) | `main/persistence/saveStore.ts`, `startRun` | ✅ | `main/saveStore.test`, `clock.test` save/load |
-| GD §17 | Packaged `.exe` offline | `scripts/pack.mjs`, `main/index.ts --self-test` | 🟡 runs packaged without the CUDA toolkit on PATH; airplane-mode run still pending | self-test 2026-10-09 |
+| GD §17 | Packaged `.exe` offline | `scripts/pack.mjs`, `main/index.ts --self-test` | 🟡 runs packaged without the CUDA toolkit on PATH; airplane-mode run still pending; unsigned `.exe` can be blocked by Smart App Control | self-test 2026-10-09, 2026-10-10 (with frontend) |
 | GD §17 | Acceptance matrix: four-member roster ✅, two-story ✅, theme ✅, collision (frontend), bag prompt ✅, water ✅, buy ✅, funds ✅, 32× ✅, milestone at 32× ✅, dialogue pauses ✅, 1.5 h action ✅, medical event ✅, outage variants ✅, advisory choices ✅, unsupported AI fact ✅, model unavailable ✅, deterministic debrief ✅, badge ✅, replay 🟡 (`startRun`), packaged offline 🟡 | — | — | various |
 
 ## Game Settings (GS): 17 categories
