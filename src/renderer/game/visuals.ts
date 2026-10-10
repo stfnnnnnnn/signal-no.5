@@ -28,3 +28,9 @@ export const windDrift = (level: string) => WIND[level] ?? 0;
 const FLOOD: Record<FloodOverlay, number> = { none: 0, low: 0.18, moderate: 0.32, severe: 0.48 };
 /** Opacity of the water layer over the floor. */
 export const floodAlpha = (f: FloodOverlay) => FLOOD[f];
+
+/** What weather can be seen from where the camera is: indoors you hear the storm and see the light, not falling rain. */
+export function weatherOverlay(rain: string, wind: string, indoor: boolean): { rainRate: number; debris: boolean; mist: boolean } {
+  if (indoor) return { rainRate: 0, debris: false, mist: false };
+  return { rainRate: rainRate(rain), debris: windDrift(wind) >= windDrift('gusty'), mist: rain !== 'none' };
+}

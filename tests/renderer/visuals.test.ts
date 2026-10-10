@@ -21,3 +21,18 @@ describe('directive visuals', () => {
     expect(flood).toEqual([...flood].sort((a, b) => a! - b!));
   });
 });
+
+import { weatherOverlay } from '../../src/renderer/game/visuals';
+import { ROOMS } from '../../src/renderer/game/rooms';
+describe('indoor weather', () => {
+  it('draws no falling rain, wind debris or mist indoors; outdoors follows the engine level', () => {
+    expect(weatherOverlay('heavy', 'strong', true)).toEqual({ rainRate: 0, debris: false, mist: false });
+    expect(weatherOverlay('heavy', 'strong', false)).toEqual({ rainRate: rainRate('heavy'), debris: true, mist: true });
+    expect(weatherOverlay('none', 'calm', false)).toEqual({ rainRate: 0, debris: false, mist: false });
+  });
+  it('the shop and evacuation centre are indoor rooms; the street is outdoors', () => {
+    expect(ROOMS.Shop.indoor).toBe(true);
+    expect(ROOMS.Evacuation.indoor).toBe(true);
+    expect(ROOMS.Street.indoor).toBe(false);
+  });
+});

@@ -187,3 +187,4 @@ button.hud-btn { width: auto; padding: 1px 8px; font-size: .85rem; border-width:
 .toasts { top: auto; bottom: 16px; left: 16px; right: auto; }
 .bad-save { border: 2px solid var(--warn); padding: 8px; display: grid; gap: 6px; }
 .bad-save p { margin: 0; color: #ffd9c8; }
+.progress-screen:focus, .debrief:focus, .guide:focus { outline: none; }

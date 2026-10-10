@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { openAtTop } from '../scroll';
 import { ACHIEVEMENT_CATALOG } from '../../../core/content/achievements';
 import { BADGE_CATALOG } from '../../../core/content/badges';
 import type { AchievementStatus } from '../../../shared/contracts/progress';
@@ -14,6 +15,8 @@ export function AchievementsScreen() {
   const [statuses, setStatuses] = useState<AchievementStatus[]>([]);
   const [earned, setEarned] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const panel = useRef<HTMLElement>(null);
+  useEffect(() => { openAtTop(panel.current); }, []);
   useEffect(() => {
     let live = true;
     void Promise.all([readAchievements(), readEarnedBadges()]).then(([a, b]) => { if (live) { setStatuses(a); setEarned(b); setLoaded(true); } });
@@ -25,7 +28,7 @@ export function AchievementsScreen() {
 
   return (
     <main className="screen">
-      <section className="panel onboarding wide progress-screen" aria-labelledby="ach">
+      <section ref={panel} tabIndex={-1} className="panel onboarding wide progress-screen" aria-labelledby="ach">
         <h2 id="ach">Achievements</h2>
         <p className="hint">{loaded ? `${unlocked} of ${rows.length} unlocked across all your storms.` : 'Loading your progress…'}</p>
         <ul className="achievements">
@@ -53,7 +56,7 @@ export function AchievementsScreen() {
             </li>
           ))}
         </ul>
-        <button onClick={() => app.go('title')} autoFocus>Back to title</button>
+        <button onClick={() => app.go('title')}>Back to title</button>
       </section>
     </main>
   );

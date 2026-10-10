@@ -10,4 +10,6 @@ it('achievements screen lists all 10 achievements and all 12 badges from the bac
   for (const a of ACHIEVEMENT_CATALOG) expect(h).toContain(a.name);
   for (const b of BADGE_CATALOG) expect(h).toContain(b.name);
   expect(h).toContain('Loading your progress');
+  expect(h).not.toMatch(/autofocus/i); // a bottom button with focus would open the screen scrolled down
+  expect(h).toMatch(/tabindex="-1"/);
 });

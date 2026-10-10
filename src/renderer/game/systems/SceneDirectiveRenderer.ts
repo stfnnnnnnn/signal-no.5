@@ -5,11 +5,11 @@ import type { PropAnchor, SceneDirective } from '../../../shared/contracts/scene
 import { addedEffects, directiveChanged } from '../directive';
 import { TILE } from '../layout';
 import { PROP_TEXTURE } from '../textures';
-import { floodAlpha, lightingLook, rainRate, windDrift } from '../visuals';
+import { floodAlpha, lightingLook, weatherOverlay, windDrift } from '../visuals';
 import { audio } from './AudioDirector';
 import { onSceneEnd } from '../sceneLifecycle';
 
-export interface RendererOptions { worldW: number; worldH: number; propAnchors?: Partial<Record<PropAnchor, { tx: number; ty: number }>>; dripAt?: { x: number; y: number } }
+export interface RendererOptions { worldW: number; worldH: number; indoor?: boolean; propAnchors?: Partial<Record<PropAnchor, { tx: number; ty: number }>>; dripAt?: { x: number; y: number } }
 
 export class SceneDirectiveRenderer {
   private current: SceneDirective | null = null;
@@ -59,11 +59,12 @@ export class SceneDirectiveRenderer {
     this.glow.setVisible(look.flashlight);
 
     // Rain and wind.
-    const rate = rainRate(d.weather.rain), drift = windDrift(d.weather.wind);
+    const sky = weatherOverlay(d.weather.rain, d.weather.wind, !!this.o.indoor);
+    const rate = sky.rainRate, drift = windDrift(d.weather.wind);
     this.rain.speedX = drift;
     if (rate > 0) { this.rain.frequency = 1000 / rate; this.rain.quantity = 1; this.rain.start(); } else this.rain.stop();
     const fx = new Set(d.effects);
-    if (fx.has('WIND_DEBRIS') || fx.has('TREE_SWAY')) { this.debris.speedX = { min: 40 + drift, max: 80 + drift } as never; this.debris.frequency = 400; this.debris.start(); } else this.debris.stop();
+    if (sky.debris && (fx.has('WIND_DEBRIS') || fx.has('TREE_SWAY'))) { this.debris.speedX = { min: 40 + drift, max: 80 + drift } as never; this.debris.frequency = 400; this.debris.start(); } else this.debris.stop();
 
     // Flood water over the floor (never over the player, who is drawn above it).
     this.water.setAlpha(floodAlpha(d.flood));
@@ -74,7 +75,7 @@ export class SceneDirectiveRenderer {
 
     // Other effects.
     if (this.drips) { if (fx.has('WINDOW_DRIPS')) this.drips.start(); else this.drips.stop(); }
-    this.mist.setAlpha(fx.has('MIST') ? 0.12 : 0);
+    this.mist.setAlpha(fx.has('MIST') && sky.mist ? 0.12 : 0);
     if (fx.has('DUST_MOTES') || fx.has('SUNBEAMS')) { this.motes.frequency = fx.has('SUNBEAMS') ? 120 : 400; this.motes.start(); } else this.motes.stop();
     // Flicker darkens the shade's fill briefly; it never touches the object's alpha (which would multiply
     // the darkness away and could leave the next lighting, e.g. an outage, too light).

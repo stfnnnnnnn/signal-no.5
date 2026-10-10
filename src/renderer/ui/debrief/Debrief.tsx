@@ -7,6 +7,7 @@ import { finishRun } from '../../services/runEnd';
 import { store } from '../../state/engineStore';
 import { useApp } from '../../state/hooks';
 import { debriefModel } from './debriefModel';
+import { openAtTop } from '../scroll';
 
 const OBJ_MARK = { met: '■', notMet: '□', notApplicable: '–' } as const;
 const time = (m: number) => `Day ${Math.floor(m / 1440) + 1}, ${String(Math.floor((m % 1440) / 60)).padStart(2, '0')}:${String(Math.floor(m % 60)).padStart(2, '0')}`;
@@ -27,14 +28,16 @@ export function Debrief() {
     void narrateDebriefOnce(ev, state).then((n) => { if (live) setNarration(n); });
     return () => { live = false; };
   }, [state, ev]);
-  useEffect(() => { if (guide && state) void markPlanViewedOnce(state.runId); top.current?.focus(); }, [guide, state]);
+  useEffect(() => { if (guide && state) void markPlanViewedOnce(state.runId); }, [guide, state]);
+  // Both views open at the top (distinct keys stop React reusing the scrolled <section>).
+  useEffect(() => { openAtTop(top.current); }, [guide]);
 
   if (!state || !ev) return <main className="screen"><section className="panel onboarding"><h2>No finished run to show.</h2><button onClick={() => app.go('title')}>Back to title</button></section></main>;
   const m = debriefModel(ev);
 
   if (guide) return (
     <main className="screen">
-      <section ref={top} tabIndex={-1} className="panel onboarding wide guide" aria-labelledby="guide">
+      <section key="guide" ref={top} tabIndex={-1} className="panel onboarding wide guide" aria-labelledby="guide">
         <h2 id="guide">Your preparedness plan</h2>
         <p className="hint">Built from this household and this storm. General guidance for learning: always follow official advisories and your local evacuation plan.</p>
         <h3>Checklist</h3>
@@ -51,7 +54,7 @@ export function Debrief() {
 
   return (
     <main className="screen">
-      <section className="panel onboarding wide debrief" aria-labelledby="debrief">
+      <section key="debrief" ref={top} tabIndex={-1} className="panel onboarding wide debrief" aria-labelledby="debrief">
         <h2 id="debrief">After the storm</h2>
         <div className="debrief-top">
           <div className="score-card">

@@ -6,7 +6,7 @@ abstract class RoomScene extends WorldScene {
   protected abstract readonly room: keyof typeof ROOMS;
   protected buildMap(): WorldMap {
     const r = ROOMS[this.room];
-    return { grid: r.grid, tilesetKey: `tiles_room_${this.room}`, wallIndex: 0, spawn: r.spawn };
+    return { grid: r.grid, tilesetKey: `tiles_room_${this.room}`, wallIndex: 0, spawn: r.spawn, renderer: { indoor: r.indoor } };
   }
   protected populate() {
     for (const a of ROOMS[this.room].anchors) {
