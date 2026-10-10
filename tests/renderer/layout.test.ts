@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { INTERACTABLES } from '../../src/core/content/interactables';
-import { anchorSpriteRect, ANCHORS, buildGrid, MAP_H, MAP_W, NPC_SPAWNS, PLAYER_SPAWN, solidTiles, T, TILE, tileCenter } from '../../src/renderer/game/layout';
+import { anchorSpriteRect, ANCHORS, buildGrid, MAP_H, MAP_W, NPC_SPAWNS, PLAYER_SPAWN, solidTiles, stairsTexture, T, TILE, tileCenter } from '../../src/renderer/game/layout';
 import { INTERACT_RADIUS, nearestAnchor } from '../../src/renderer/game/proximity';
 
 const grid = buildGrid();
@@ -66,5 +66,10 @@ describe('house_fixed_v1 layout', () => {
       expect(r.y + r.h).toBe((a.ty + 1) * TILE);
       expect(r.x + r.w / 2).toBe(a.tx * TILE + TILE / 2);
     }
+  });
+  it('the stairs spot shows a staircase only when the home has more than one floor', () => {
+    expect(stairsTexture(1)).toBe('prop_high_shelf');
+    expect(stairsTexture(2)).toBe('prop_stairs');
+    expect(stairsTexture(3)).toBe('prop_stairs');
   });
 });

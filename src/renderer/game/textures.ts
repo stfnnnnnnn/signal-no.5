@@ -42,6 +42,16 @@ export function makeGeneratedTextures(scene: Phaser.Scene) {
   draw(scene, 'prop_loose', 16, 16, (p) => { p(2, 9, 5, 4, '#7a8a96'); p(9, 6, 4, 7, '#b0703a'); p(5, 3, 3, 3, '#5aa05a'); });
   draw(scene, 'prop_tied', 16, 16, (p) => { p(2, 7, 12, 6, '#7a8a96'); p(2, 9, 12, 1, '#e8d080'); });
   draw(scene, 'prop_sandbags', 16, 16, (p) => { for (const [x, y] of [[0, 10], [5, 10], [10, 10], [2, 6], [8, 6]]) { p(x!, y!, 6, 4, '#c8b07a'); p(x!, y! + 3, 6, 1, '#8c7a50'); } });
+  // the STAIRS spot: wooden steps rising to the wall with a rail (multi-floor), or a tall wall shelf (single-story)
+  draw(scene, 'prop_stairs', 16, 16, (p) => {
+    for (let i = 0; i < 4; i++) { p(i * 4, 12 - i * 4, 16 - i * 4, 4, i % 2 ? '#9a6b3c' : '#b8844c'); p(i * 4, 12 - i * 4, 16 - i * 4, 1, '#d9a866'); }
+    p(1, 13, 1, 2, '#5e3f22'); p(0, 11, 2, 1, '#5e3f22'); for (let i = 0; i < 12; i++) p(1 + i, 10 - i, 2, 1, '#5e3f22');
+  });
+  draw(scene, 'prop_high_shelf', 16, 16, (p) => {
+    p(1, 0, 14, 16, '#10141f'); p(2, 1, 12, 15, '#7a5230');
+    for (const y of [5, 10, 15]) p(2, y, 12, 1, '#5e3f22');
+    p(3, 2, 4, 3, '#c29a66'); p(9, 3, 3, 2, '#9fd0ff'); p(4, 7, 3, 3, '#e8e0c8'); p(8, 6, 4, 4, '#b08a5a');
+  });
   draw(scene, 'prop_boxes', 16, 16, (p) => { p(1, 8, 7, 6, '#b08a5a'); p(7, 3, 7, 6, '#c29a66'); p(4, 8, 1, 6, '#7a5e3a'); });
   draw(scene, 'prop_table', 16, 16, (p) => { p(1, 6, 14, 3, '#8a5a32'); p(2, 9, 2, 6, '#5e3f22'); p(12, 9, 2, 6, '#5e3f22'); });
   draw(scene, 'prop_table_light', 16, 16, (p) => { p(1, 6, 14, 3, '#8a5a32'); p(2, 9, 2, 6, '#5e3f22'); p(12, 9, 2, 6, '#5e3f22'); p(6, 3, 5, 3, '#e05561'); p(11, 3, 2, 3, '#fff2a0'); });

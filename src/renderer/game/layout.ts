@@ -69,6 +69,10 @@ export function anchorSpriteRect(a: Anchor): { x: number; y: number; w: number; 
   return { x: a.tx * TILE + (TILE - a.size) / 2, y: (a.ty + 1) * TILE - a.size, w: a.size, h: a.size };
 }
 
+/** The STAIRS spot ("Stairs / high shelf") as the household's home has it: a staircase cue for multi-floor homes
+ *  (no explorable upper floor, per the blueprint), a high shelf for a single-story house. */
+export const stairsTexture = (floors: number) => (floors > 1 ? 'prop_stairs' : 'prop_high_shelf');
+
 /** Where SceneDirective props are drawn in the house (visual only: props never change collision). */
 export const PROP_ANCHORS: Record<import('../../shared/contracts/scene').PropAnchor, { tx: number; ty: number }> = {
   WINDOW: { tx: 17, ty: 17 }, YARD: { tx: 25, ty: 15 }, ENTRANCE: { tx: 26, ty: 17 }, STAIRS: { tx: 27, ty: 15 },

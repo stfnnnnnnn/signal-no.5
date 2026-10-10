@@ -2,7 +2,7 @@
 // Movement, collision, interaction, time and directive rendering come from WorldScene.
 import { store } from '../../state/engineStore';
 import { directives } from '../../state/directiveStore';
-import { ANCHORS, PLAYER_SPAWN, PROP_ANCHORS, T, anchorSpriteRect, buildGrid, tileCenter } from '../layout';
+import { ANCHORS, PLAYER_SPAWN, PROP_ANCHORS, T, anchorSpriteRect, buildGrid, stairsTexture, tileCenter } from '../layout';
 import { itemKey } from '../assets';
 import { NpcSystem } from '../systems/NpcSystem';
 import { WorldScene, type WorldMap } from './WorldScene';
@@ -22,10 +22,12 @@ export class House extends WorldScene {
   protected populate() {
     const world = store.engine.getWorldConfig();
     const present = new Set(world.interactables.map((i) => i.id));
+    const floors = store.engine.getProfile().housing.floors;
     for (const a of ANCHORS.filter((x) => present.has(x.id))) {
       const c = tileCenter(a.tx, a.ty);
       const r = anchorSpriteRect(a);
-      this.add.image(r.x, r.y, a.sprite ? itemKey(a.sprite) : `ph_${a.id}`).setOrigin(0, 0).setDisplaySize(r.w, r.h).setDepth(c.y);
+      const key = a.id === 'STAIRS' ? stairsTexture(floors) : a.sprite ? itemKey(a.sprite) : `ph_${a.id}`;
+      this.add.image(r.x, r.y, key).setOrigin(0, 0).setDisplaySize(r.w, r.h).setDepth(c.y);
       this.addAnchor(a.id, a.tx, a.ty); // collision is exactly the anchor's tile
     }
     this.npcs = new NpcSystem(this);
