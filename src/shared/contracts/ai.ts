@@ -19,10 +19,16 @@ export const ScenarioAIRequest = z.object({
     pets: z.array(z.string()),
     homeType: z.string(),
     floors: z.number().int(),
+    /** Plain-words home ("single-story house"); the only way the AI may describe the player's home. Optional (additive). */
+    homeDescription: z.string().optional(),
     theme: z.string(),
   }),
   state: z.object({
-    hoursToLandfall: z.number(),
+    /** null while the game keeps landfall timing hidden from the player (environment.landfallRevealed). */
+    hoursToLandfall: z.number().nullable(),
+    landfallRevealed: z.boolean().optional(),
+    floodSeverity: z.string().optional(),
+    location: z.enum(['home', 'inTransit', 'evacuationCenter']).optional(),
     weather: z.string(),
     powerAvailable: z.boolean(),
     goBag: z.string(),
@@ -65,5 +71,7 @@ export const DebriefNarrationRequest = z.object({
   gaps: z.array(z.object({ id: z.string(), text: z.string() })),
   badges: z.array(z.string()),
   householdSize: z.number().int(),
+  /** The configured home, so narration can be checked against it. Optional (additive). */
+  home: z.object({ type: z.string(), floors: z.number().int(), description: z.string() }).optional(),
 });
 export type DebriefNarrationRequest = z.infer<typeof DebriefNarrationRequest>;

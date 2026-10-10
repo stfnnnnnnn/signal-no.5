@@ -3,22 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <title>Signal No. 5</title>
-  <style>
-    body { background: #10141f; color: #e8e6d9; font: 14px/1.5 monospace; margin: 16px; }
-    h1 { font-size: 16px; color: #f2c14e; margin: 0 0 8px; } h2 { font-size: 14px; color: #9fd0ff; margin: 12px 0 4px; }
-    button { font: inherit; margin: 2px 4px 2px 0; padding: 4px 8px; background: #2b3550; color: #e8e6d9; border: 2px solid #f2c14e; cursor: pointer; }
-    button:disabled { opacity: .4; cursor: default; } .tag { border: 1px solid currentColor; padding: 0 4px; font-size: 12px; }
-    .ai { color: #5fb36a; } .fallback { color: #d9734e; } pre { white-space: pre-wrap; margin: 0; } .row { display: flex; gap: 24px; }
-    .col { flex: 1; min-width: 0; } #event { border: 2px solid #3d4a6b; padding: 8px; margin: 8px 0; }
-  </style>
 </head>
 <body>
-  <h1>SIGNAL NO. 5 — backend dev harness (replace with the frontend UI)</h1>
-  <div>AI: <span id="ai">…</span> · <span id="info"></span></div>
-  <div id="controls"></div>
-  <div id="event"></div>
-  <div class="row"><div class="col"><h2>World actions</h2><div id="actions"></div></div><div class="col"><h2>State</h2><pre id="state"></pre></div></div>
-  <div id="debrief"></div>
-  <script type="module" src="./harness.ts"></script>
+  <div id="root"></div>
+  <script type="module" src="./main.tsx"></script>
 </body>
 </html>

@@ -4,7 +4,9 @@ Start here if you're building the Signal No. 5 game UI (Phaser + React).
 
 ## Status
 
-| Backend: done and tested (you consume it) | Frontend: not started (you build it) |
+**2026-10-10: the frontend is built and playable end to end** (branch `frontend/vertical-slice`, code in `src/renderer/`). The right-hand column below was the original build list; every item in it now exists. Known gaps are in the root [README](../../README.md#known-limitations).
+
+| Backend: done and tested (you consume it) | Frontend: built (originally the to-do list) |
 |---|---|
 | Onboarding v2 validation and household generation (Q0 + 8 custom questions or 4 random steps) | Q0, onboarding, customization and review screens |
 | Authoritative `GameState`, actions, consequences, decision log | Phaser house scene: tilemap, 4-direction movement, collision |
@@ -51,7 +53,7 @@ If the backend lacks something you need, raise it. Don't work around it in the U
 ```powershell
 npm install
 npm run dev        # Electron + Vite (hot reload) at http://localhost:5173 inside the app window
-npm test           # backend tests must stay green (329)
+npm test           # all tests must stay green (517: backend + frontend)
 npm run typecheck
 ```
 

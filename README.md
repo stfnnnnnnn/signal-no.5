@@ -4,7 +4,7 @@ An offline-capable, personalized **8-bit typhoon preparedness RPG** for Windows.
 
 A **local language model** (llama.cpp + Qwen3, running on the same laptop) writes contextual NPC dialogue and debrief wording. A **deterministic simulation engine** owns every rule, resource, consequence and score. The game stays fully playable without the model.
 
-> **Status: backend complete, frontend not started.** This repository contains the simulation engine, shared contracts, local-AI integration, Electron shell, persistence, tests and a packaging proof of concept. There is **no playable game UI yet**. `src/renderer/` holds a backend *development harness* (plain buttons and JSON), not the game.
+> **Status: playable end to end (2026-10-10).** The game runs from title screen to debrief: household onboarding (custom or random), the house, shop, street and evacuation centre in Phaser, the HUD and menus in React, AI-narrated events with reviewed fallback, autosave and Continue, the debrief with badges and a preparedness plan, achievements and replay. The packaged `SignalNo5.exe` runs Qwen3-4B locally. See [Known limitations](#known-limitations) before demoing on another PC.
 
 ## Core systems
 
@@ -20,6 +20,7 @@ A **local language model** (llama.cpp + Qwen3, running on the same laptop) write
 | Local AI narrative | Context builder, constrained JSON decoding, validation, grounding guard, reviewed fallback text | `src/core/ai/`, `src/main/ai/` |
 | Scene directives | Deterministic weather, lighting, flood, prop, NPC-cue and audio presets from state; optional AI atmospheric variations, validated and merged without overriding state | `src/core/scene/`, `src/shared/contracts/scene.ts` |
 | Scoring, badges, achievements | 6 weighted competencies (100 pts), score endings, badges B01–B12 (Handa needs ≥ 85% player wellbeing + critical competencies), lessons, cross-run achievements A01–A10 | `src/core/evaluation/`, `src/core/content/badges.ts`, `findings.ts` |
+| Game frontend | Phaser 3 world scenes (house, shop, street, evacuation centre), weather/flood/lighting from scene directives, NPCs; React screens (title, onboarding, HUD, inventory, objectives, shop, events, debrief, plan, achievements, settings); autosave and Continue | `src/renderer/` |
 | Desktop packaging | Electron app + llama.cpp runtime + one model as a portable folder with `SignalNo5.exe` | `src/main/`, `scripts/pack.mjs` |
 
 ## Technology stack
@@ -29,7 +30,11 @@ A **local language model** (llama.cpp + Qwen3, running on the same laptop) write
 | Package | Version | Role |
 |---|---|---|
 | TypeScript | 7.0.2 | Language (`tsc --noEmit` type checking) |
-| Zod | 4.6.5 | Shared contracts and validation (the only runtime dependency) |
+| Zod | 4.6.5 | Shared contracts and validation |
+| Phaser | 3.90.0 | Game world rendering (scenes, sprites, movement) |
+| React / React DOM | 19.3.0 | Screens, HUD and menus |
+| @vitejs/plugin-react | 5.2.0 | JSX in the renderer build |
+| pngjs | 7.0.0 | Asset preparation script (`npm run assets`) and image tests |
 | Vitest | 5.0.3 | Unit and integration tests |
 | Electron | 44.7.0 | Desktop shell |
 | electron-vite | 5.0.0 | Dev server and build for main/preload/renderer |
@@ -39,22 +44,41 @@ A **local language model** (llama.cpp + Qwen3, running on the same laptop) write
 
 **External (not in Git, not npm):** llama.cpp `llama-server` build **b11517** (win-cuda-12.4-x64 + CUDA 12.4 runtime DLLs) and the model **Qwen3-4B-Instruct-2507 Q4_K_M** (GGUF; Qwen3-1.7B Q4_K_M was also benchmarked). See [docs/setup/LOCAL_AI_SETUP.md](docs/setup/LOCAL_AI_SETUP.md).
 
-**Planned (frontend, not installed yet):** Phaser 3.90 and React (per `docs/architecture/ARCHITECTURE_LOCK.md`). Playwright is **not** configured.
+Playwright is **not** configured; UI behaviour is covered by server-rendered React tests and manual runs.
 
 ## Quick start
 
 Prerequisites: Windows 10/11 x64, Git, **Node.js ≥ 22.12** (Node 24 LTS recommended; `package.json` `engines` enforces ≥ 22.12 because Electron 44 requires it).
 
 ```powershell
-git clone <repository-url> "signal no.5"
+git clone https://github.com/stfnnnnnnn/signal-no.5 "signal no.5"
 cd "signal no.5"
 npm install
-npm test            # 329 backend tests
-npm run typecheck   # tsc --noEmit
-npm run dev         # Electron + Vite dev server; opens the backend dev harness
+node node_modules/electron/install.js   # only if node_modules\electron\dist\electron.exe is missing (npm 11 skips Electron's download)
+npm test            # 517 tests
+npm run typecheck   # tsc --noEmit (main and renderer)
+npm start           # build and play
 ```
 
-No model? That's fine. If no llama.cpp runtime/model is found, the app reports AI status `unavailable` and every dialogue uses reviewed fallback text. To enable local inference, follow [LOCAL_AI_SETUP.md](docs/setup/LOCAL_AI_SETUP.md).
+No model? That's fine. If no llama.cpp runtime/model is found, the title screen shows "Local AI offline" and every dialogue uses reviewed fallback text; everything else plays the same. To enable local inference, put the runtime and model on the machine and point the app at them before `npm start` (details in [LOCAL_AI_SETUP.md](docs/setup/LOCAL_AI_SETUP.md)):
+
+```powershell
+$env:SIGNAL_LLM_DIR = 'C:\signal-llm\llama-b11517-cuda124'                    # folder with llama-server.exe
+$env:SIGNAL_MODEL   = 'C:\signal-llm\models\Qwen3-4B-Instruct-2507-Q4_K_M.gguf'
+npm start
+```
+
+To hand the game to someone without Node, build the portable folder with `npm run pack` ([WINDOWS_PACKAGING.md](docs/setup/WINDOWS_PACKAGING.md)) and copy all of `dist\win-unpacked\`; they run `SignalNo5.exe`.
+
+## Controls
+
+| Key | Action |
+|---|---|
+| WASD / arrow keys | Move |
+| E or Space | Interact with the highlighted object or person |
+| I / O | Inventory / objectives |
+| `]` / `[` | Faster / slower game time |
+| Esc | Close the open menu |
 
 | Script | Command | What it does |
 |---|---|---|
@@ -83,8 +107,11 @@ src/
     ai/               Context builder, prompts, schema, validation, grounding guard, fallbacks
   main/               Electron main process: llama-server manager, AI service, saves, IPC, config
   preload/            contextBridge → window.signal
-  renderer/           Backend dev harness (to be replaced by the frontend)
-tests/                Vitest suites (+ tests/main for main-process modules)
+  renderer/           The game frontend: app/ (screens, routing), game/ (Phaser scenes, layout, textures),
+                      ui/ (React screens and HUD), state/ (engine, app and UI stores), services/ (AI, saves)
+tests/                Vitest suites (+ tests/main for main-process modules, tests/renderer and
+                      tests/renderer-ui for frontend logic and server-rendered screens)
+assets/               Source art sheets (processed copies used by the game live in src/renderer/assets)
 scripts/              run.mjs (env-safe launcher), pack.mjs (packaging)
 spikes/               Throwaway proof-of-concept code (not imported by src/)
 docs/                 Specifications, architecture, implementation and setup docs
@@ -97,8 +124,10 @@ docs/                 Specifications, architecture, implementation and setup doc
 
 ## Known limitations
 
-- **No frontend yet:** no Phaser scenes, React UI, sprites, animations or maps.
-- **Offline test pending:** the packaged app has run with inference fully local and the CUDA toolkit removed from PATH. A run with networking disabled (airplane mode) has **not** been done yet.
+- **Unsigned executable:** `SignalNo5.exe` is not code-signed. Windows SmartScreen may warn ("More info → Run anyway"), and on PCs with **Smart App Control** turned on, Windows can block a build outright ("An Application Control policy has blocked this file"). Whether a given build is blocked depends on Microsoft's reputation check for that exact file: on the development PC, two builds ran and the next was blocked. There is no workaround in the app; on such a PC, run from source with `npm start` instead. Only code signing fixes this.
+- **AI needs an NVIDIA GPU:** the bundled runtime is llama.cpp's CUDA 12.4 build (driver 551.61 or newer). Without one, the game runs with reviewed fallback text. See [WINDOWS_PACKAGING.md §6](docs/setup/WINDOWS_PACKAGING.md#6-running-on-another-pc).
+- **Offline test pending:** the packaged app runs inference fully locally (127.0.0.1 only) and has passed its self-test with the CUDA toolkit removed from PATH, but a run with networking disabled (airplane mode) has **not** been done yet.
+- **Single floor plan:** every household uses the same house map. Two- and multi-story homes show a staircase as a cue but have no explorable upper floor; the floor count still changes flood losses, the windows needed for the Handa badge and the AI's descriptions.
 - **Provisional model:** Qwen3-4B-Instruct-2507 is the configured primary model. Its responses sometimes assert ungrounded facts, which the grounding guard rejects in favour of reviewed fallback text. The 4B-vs-1.7B decision is still open.
 - **Educational content needs review:** all fallback dialogue, lessons and checklist text is placeholder wording pending review against official Philippine sources (PAGASA, NDRRMC/OCD, Philippine Red Cross).
 - **Saves are not encrypted:** local JSON files include the household profile. See [LOCAL_STORAGE_SETUP.md](docs/setup/LOCAL_STORAGE_SETUP.md).

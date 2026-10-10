@@ -19,6 +19,8 @@ The API details live in [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEG
 
 ## 1. Current repository state (inspected, not assumed)
 
+> **Historical (2026-10-09, before frontend work).** The frontend described in this blueprint has since been built on `frontend/vertical-slice`: React and Phaser are installed, the scenes, screens and processed assets exist under `src/renderer/`, and `npm test` runs 517 tests. The table below is kept as the starting-point record.
+
 | Area | State | Evidence |
 |---|---|---|
 | Game UI (React screens) | **Missing** | No `.tsx` files anywhere. React isn't installed |

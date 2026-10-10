@@ -63,6 +63,8 @@ export class LlmServerManager {
   private readonly token = randomBytes(12).toString('hex');
   private readonly apiKey = randomBytes(24).toString('hex');
   private listeners = new Set<(s: ServerStatus) => void>();
+  /** Set by stop(); a start() still in progress must not launch (or keep) a server after shutdown began. */
+  private stopRequested = false;
 
   constructor(options: ServerManagerOptions) {
     this.options = options;
@@ -97,12 +99,14 @@ export class LlmServerManager {
   async start(): Promise<{ readyMs: number; port: number; cleanup: CleanupResult }> {
     if (this.status === 'ready' || this.status === 'starting') throw new Error(`server already ${this.status}`);
     this.setStatus('starting');
+    this.stopRequested = false;
     try {
       const cleanup = await this.cleanupStale();
       this.port = null;
       for (const p of this.options.ports ?? DEFAULT_PORTS) if (await portIsFree(p)) { this.port = p; break; }
       if (!this.port) throw new Error('no free port for the model server');
       if (!existsSync(this.options.exePath)) throw new Error(`model server not found: ${this.options.exePath}`);
+      if (this.stopRequested) throw new Error('model server start cancelled');
       const base = ['-m', this.options.modelPath, '--host', '127.0.0.1', '--port', String(this.port), '-ngl', String(this.options.ngl ?? 99),
         '-c', String(this.options.ctx ?? 2048), '-np', '1', '--no-webui', '--api-key', this.apiKey, '--alias', `signalno5-${this.token}`, ...(this.options.extraArgs ?? [])];
       const args = this.options.buildArgs ? this.options.buildArgs(base) : base;
@@ -120,6 +124,7 @@ export class LlmServerManager {
       const timeout = this.options.startupTimeoutMs ?? 120_000;
       while (Date.now() - t0 < timeout) {
         if (exited) throw new Error('model server exited during startup');
+        if (this.stopRequested) throw new Error('model server start cancelled');
         try {
           const r = await fetch(`http://127.0.0.1:${this.port}/health`, { signal: AbortSignal.timeout(2000) });
           if (r.status === 200) { this.setStatus('ready'); return { readyMs: Date.now() - t0, port: this.port, cleanup }; }
@@ -135,6 +140,7 @@ export class LlmServerManager {
   }
 
   async stop(): Promise<boolean> {
+    this.stopRequested = true;
     rmSync(this.options.pidFile, { force: true });
     const c = this.child;
     if (!c) { if (this.status !== 'unavailable') this.setStatus('stopped'); return false; }

@@ -10,11 +10,11 @@ git clone <repository-url> "signal no.5"
 cd "signal no.5"
 npm install
 node node_modules/electron/install.js   # only if node_modules\electron\dist\electron.exe is missing (npm 11)
-npm test              # expect 329 passed
-npm run dev           # opens the Electron window with the backend dev harness
+npm test              # expect 517 passed
+npm run dev           # opens the game with hot reload
 ```
 
-The dev harness (`src/renderer/harness.ts`) shows a fictional household with buttons for actions and event choices, JSON state, and AI/fallback labels. It's the quickest way to see what the engine does. Details: [DEVELOPMENT_SETUP.md](../setup/DEVELOPMENT_SETUP.md).
+The game opens on the title screen. (The original backend dev harness, `src/renderer/harness.ts`, was replaced by the game frontend.) Details: [DEVELOPMENT_SETUP.md](../setup/DEVELOPMENT_SETUP.md).
 
 ## 2. What already works (consume it, don't rebuild it)
 

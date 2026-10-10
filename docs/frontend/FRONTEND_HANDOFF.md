@@ -4,9 +4,11 @@
 
 This is the one-page summary. The full detail for every task is in [FRONTEND_IMPLEMENTATION_BLUEPRINT.md](FRONTEND_IMPLEMENTATION_BLUEPRINT.md) (task IDs match). Every API is in [FRONTEND_BACKEND_INTEGRATION.md](FRONTEND_BACKEND_INTEGRATION.md).
 
-**State on 2026-10-10:**
-- The backend is complete, with 329 tests passing (2026-10-10).
-- **No frontend code or assets exist.** `src/renderer/harness.ts` is a dev harness to be replaced.
+**State at handoff (start of 2026-10-10):**
+- The backend was complete, with 329 tests passing.
+- No frontend code or assets existed; `src/renderer/harness.ts` was a dev harness.
+
+**Current state (end of 2026-10-10):** milestones M1–M9 are implemented on `frontend/vertical-slice` (517 tests passing) and the dev harness is gone. M10: two full end-to-end runs passed (real model + custom household; fallback + random household with evacuation and replay); the airplane-mode check is still pending. This page is kept as the record of the plan.
 
 ## Order of work (milestones M1–M10, blueprint §10)
 1. **M1** foundation (F0, F1) → **M2** map + movement (A1, A2, A3) → **M3** interactions + actions (A3, B5 menu, B5b, badge toast) → **M4** event dialogs (B5).
